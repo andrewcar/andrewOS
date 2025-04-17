@@ -224,13 +224,14 @@
           exit: function () {
             this.pause();
             typeText(this, "\nReturning to landing page...\n", 69, () => {
-              window.location.href = '/';
+              window.history.pushState({}, '', '/');
+              window.location.replace('/');
             });
           },
         },
         {
           greetings:
-            "\n\n\n                       ▀██                               ▄▄█▀▀██    ▄█▀▀▀▄█\n   ▄▄▄▄   ▄▄ ▄▄▄     ▄▄ ██  ▄▄▄ ▄▄    ▄▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄█▀    ██   ██▄▄  ▀\n  ▀▀ ▄██   ██  ██  ▄▀  ▀██   ██▀ ▀▀ ▄█▄▄▄██  ██  ██  █  ██      ██   ▀▀███▄\n  ▄█▀ ██   ██  ██  █▄   ██   ██     ██        ███ ███   ▀█▄     ██ ▄     ▀██\n  ▀█▄▄▀█▀ ▄██▄ ██▄ ▀█▄▄▀██▄ ▄██▄     ▀█▄▄▄▀    █   █     ▀▀█▄▄▄█▀  █▀▄▄▄▄█▀\n\n///////////////////\n//// Build 271 ////\n///////////////////\n\nThe available known commands are boredgames, clear, cv, dob, email, exit, fox, github, help, linkedin, lola, medium, name, phone and ruleofthree.\n\n",
+            "\n\n\n                       ▀██                               ▄▄█▀▀██    ▄█▀▀▀▄█\n   ▄▄▄▄   ▄▄ ▄▄▄     ▄▄ ██  ▄▄▄ ▄▄    ▄▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄█▀    ██   ██▄▄  ▀\n  ▀▀ ▄██   ██  ██  ▄▀  ▀██   ██▀ ▀▀ ▄█▄▄▄██  ██  ██  █  ██      ██   ▀▀███▄\n  ▄█▀ ██   ██  ██  █▄   ██   ██     ██        ███ ███   ▀█▄     ██ ▄     ▀██\n  ▀█▄▄▀█▀ ▄██▄ ██▄ ▀█▄▄▀██▄ ▄██▄     ▀█▄▄▄▀    █   █     ▀▀█▄▄▄█▀  █▀▄▄▄▄█▀\n\n///////////////////\n//// Build 272 ////\n///////////////////\n\nThe available known commands are boredgames, clear, cv, dob, email, exit, fox, github, help, linkedin, lola, medium, name, phone and ruleofthree.\n\n",
           checkArity: false,
         }
       );
@@ -260,7 +261,7 @@
           mutations.forEach(function(mutation) {
             if (mutation.addedNodes) {
                 $(mutation.addedNodes).each(function() {
-                    if ($(this).text().includes('Build 271')) {
+                    if ($(this).text().includes('Build 272')) {
                         let updatedText = $(this).text().replace(/\[BUILD\]/g, '').trim();
                         $(this).text(updatedText);
                     }
