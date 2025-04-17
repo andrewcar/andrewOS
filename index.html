@@ -3,6 +3,7 @@
   <head>
     <title>andrewOS</title>
     <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
       body {
         margin: 0;
@@ -160,6 +161,35 @@
       .fade-in {
         opacity: 1 !important;
         transform: translateY(0) !important;
+      }
+      @media (max-width: 768px) {
+        .header {
+          font-size: 5.85rem; /* 30% increase */
+        }
+        .madlib {
+          font-size: 3.38rem; /* 69% increase */
+        }
+        .madlib input {
+          font-size: 3.38rem; /* 69% increase */
+          width: 80%;
+        }
+        .initial-button,
+        .send-button {
+          font-size: 3rem; /* 100% increase */
+          padding: 1.5rem 3rem;
+          margin-top: 3rem;
+        }
+        .contact-form {
+          font-size: 4rem; /* 100% increase */
+        }
+        .contact-form input {
+          font-size: 4rem; /* 100% increase */
+          width: 80%;
+        }
+        .final-subtitle {
+          font-size: 1.56rem; /* 30% increase */
+          margin-top: 2rem; /* Added 20px more space from button */
+        }
       }
     </style>
   </head>
