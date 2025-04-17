@@ -112,7 +112,7 @@
           },
           help: function () {
 			      this.pause();
-			      typeText(this, "\nThe available known commands are boredgames, clear, cv, dob, email, fox, github, help, linkedin, lola, medium, name, phone and ruleofthree.\n", 69, () => {
+			      typeText(this, "\nThe available known commands are boredgames, clear, cv, dob, email, exit, fox, github, help, linkedin, lola, medium, name, phone and ruleofthree.\n", 69, () => {
 				      this.resume();
 			      });
           },
@@ -220,6 +220,12 @@
 			      typeText(this, "\nYour old magic won't work here.\n", 69, () => {
 				      this.resume();
 			      });
+          },
+          exit: function () {
+            this.pause();
+            typeText(this, "\nReturning to landing page...\n", 69, () => {
+              window.location.href = '/';
+            });
           },
         },
         {
