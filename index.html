@@ -7,32 +7,368 @@
       body {
         margin: 0;
         padding: 0;
-        height: 100vh;
+        min-height: 100vh;
         display: flex;
-        justify-content: center;
+        flex-direction: column;
+        justify-content: flex-start;
         align-items: center;
-        background-color: #000;
+        background-color: #FAF4E8;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        padding: 1rem;
+      }
+      .ascii-art {
         font-family: monospace;
-      }
-      .terminal-button {
-        padding: 15px 30px;
-        font-size: 18px;
-        background-color: transparent;
-        color: #00c800;
-        border: 2px solid #00c800;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        font-family: inherit;
-      }
-      .terminal-button:hover {
-        background-color: #00c800;
+        white-space: pre;
         color: #000;
+        margin: 1rem 0 3rem 0;
+        text-align: center;
+        line-height: 1.2;
+        font-size: 0.3rem;
+        cursor: pointer;
+        user-select: none;
+      }
+      .header {
+        font-size: 4.5rem;
+        font-weight: 700;
+        line-height: 1.1;
+        margin-bottom: 1.5rem;
+        text-align: center;
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .header span {
+        display: inline-block;
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: opacity 0.1s ease, transform 0.2s ease;
+      }
+      .header span.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .subtitle {
+        font-size: 2rem;
+        margin-bottom: 2rem;
+        color: #333;
+      }
+      .madlib {
+        font-size: 2rem;
+        color: #333;
+        margin-bottom: 3rem;
+        text-align: center;
+        line-height: 1.8;
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: opacity 0.5s ease, transform 1s ease;
+      }
+      .madlib input {
+        font-size: 2rem;
+        width: 300px;
+        padding: 0.2rem;
+        border: none;
+        border-bottom: 2px solid #000;
+        background: transparent;
+        font-family: inherit;
+        text-align: center;
+        transition: font-size 0.2s ease;
+      }
+      .madlib input:focus {
+        outline: none;
+        border-bottom-color: #c80000;
+      }
+      .madlib input::placeholder {
+        color: #999;
+        font-style: italic;
+      }
+      .contact-form {
+        font-size: 2rem;
+        color: #333;
+        margin-bottom: 3rem;
+        text-align: center;
+        line-height: 1.8;
+        opacity: 1;
+        display: none;
+      }
+      .contact-form > * {
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: opacity 0.5s ease, transform 0.5s ease, font-size 0.2s ease;
+      }
+      .contact-form.fade-in > *:nth-child(1) {
+        opacity: 1;
+        transform: translateY(0);
+        transition-delay: 0.2s;
+      }
+      .contact-form.fade-in > *:nth-child(2) {
+        opacity: 1;
+        transform: translateY(0);
+        transition-delay: 0.4s;
+      }
+      .contact-form input {
+        font-size: 2rem;
+        width: 300px;
+        padding: 0.2rem;
+        border: none;
+        border-bottom: 2px solid #000;
+        background: transparent;
+        font-family: inherit;
+        text-align: center;
+      }
+      .contact-form input:focus {
+        outline: none;
+        border-bottom-color: #c80000;
+      }
+      .contact-form input::placeholder {
+        color: #999;
+        font-style: italic;
+      }
+      .initial-button,
+      .send-button {
+        background: #000;
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        padding: 1rem 2rem;
+        font-size: 1.5rem;
+        cursor: pointer;
+        margin-top: 2rem;
+        font-family: inherit;
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: opacity 0.5s ease, transform 0.5s ease, transform 0.2s ease;
+      }
+      .initial-button:hover,
+      .send-button:hover {
+        transform: scale(1.05);
+      }
+      .send-button {
+        display: none;
+      }
+      .final-subtitle {
+        font-size: 1.2rem;
+        color: #666;
+        margin-top: 0.5rem;
+        font-style: italic;
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: opacity 0.5s ease, transform 0.5s ease;
+        display: none;
+      }
+      .fade-out {
+        opacity: 0;
+      }
+      .fade-in {
+        opacity: 1 !important;
+        transform: translateY(0) !important;
       }
     </style>
   </head>
   <body>
-    <button class="terminal-button" onclick="window.location.href='/terminal.html'">
-      ENTER TERMINAL
-    </button>
+    <pre class="ascii-art" onclick="window.location.href='/terminal.html'">                       ▀██                               ▄▄█▀▀██    ▄█▀▀▀▄█
+   ▄▄▄▄   ▄▄ ▄▄▄     ▄▄ ██  ▄▄▄ ▄▄    ▄▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄█▀    ██   ██▄▄  ▀
+  ▀▀ ▄██   ██  ██  ▄▀  ▀██   ██▀ ▀▀ ▄█▄▄▄██  ██  ██  █  ██      ██   ▀▀███▄
+   ▄█▀ ██   ██  ██  █▄   ██   ██     ██        ███ ███   ▀█▄     ██ ▄     ▀██
+  ▀█▄▄▀█▀ ▄██▄ ██▄ ▀█▄▄▀██▄ ▄██▄     ▀█▄▄▄▀    █   █     ▀▀█▄▄▄█▀  █▀▄▄▄▄█▀</pre>
+    <h1 class="header">Let's build<br>Something.</h1>
+    <br><br>
+    <div class="madlib">
+      I want to build a <input type="text" id="what"><br> that
+      <input type="text" id="does">.
+    </div>
+    <div class="contact-form">
+      <div>Drop your email or IG.</div>
+      <input type="text" id="contact" placeholder="rickrubin@aol.com">
+    </div>
+    <button class="initial-button">Send to Andrew</button>
+    <button class="send-button">Send to Andrew</button>
+    <div class="final-subtitle">(for real this time)</div>
+    <script>
+      const placeholders = [
+        ["a weird website", "helps people flirt with AI"],
+        ["a talking button", "writes code while you nap"],
+        [""]
+      ];
+      
+      window.onload = function() {
+        const randomIndex = Math.floor(Math.random() * (placeholders.length - 1));
+        const inputs = document.querySelectorAll('.madlib input');
+        
+        // Function to animate text typing
+        function typeText(element, text, onComplete) {
+          element.innerHTML = ''; // Clear existing content
+          const lines = text.split('<br>');
+          let currentLine = 0;
+          let currentChar = 0;
+          
+          // Create container for each line
+          lines.forEach(() => {
+            const div = document.createElement('div');
+            element.appendChild(div);
+          });
+          
+          function addCharacter() {
+            if (currentLine < lines.length) {
+              const line = lines[currentLine];
+              if (currentChar < line.length) {
+                const span = document.createElement('span');
+                span.textContent = line[currentChar];
+                if (line[currentChar] === ' ') {
+                  span.innerHTML = '&nbsp;';
+                }
+                element.children[currentLine].appendChild(span);
+                setTimeout(() => span.classList.add('show'), 50);
+                currentChar++;
+                setTimeout(addCharacter, 69);
+              } else {
+                currentLine++;
+                currentChar = 0;
+                if (currentLine < lines.length) {
+                  setTimeout(addCharacter, 69);
+                } else {
+                  onComplete && setTimeout(onComplete, 200);
+                }
+              }
+            }
+          }
+          
+          addCharacter();
+        }
+
+        // Initial animation sequence
+        const header = document.querySelector('.header');
+        typeText(header, "Let's build<br>something.", () => {
+          setTimeout(() => {
+            document.querySelector('.madlib').classList.add('fade-in');
+            setTimeout(() => {
+              document.querySelector('.initial-button').classList.add('fade-in');
+            }, 200);
+          }, 200);
+        });
+
+        // Handle form transition
+        document.querySelector('.initial-button').addEventListener('click', function() {
+          const madlib = document.querySelector('.madlib');
+          const contact = document.querySelector('.contact-form');
+          const header = document.querySelector('.header');
+          const initialButton = document.querySelector('.initial-button');
+          const sendButton = document.querySelector('.send-button');
+          
+          // Start transitions
+          madlib.classList.add('fade-out');
+          initialButton.classList.add('fade-out');
+          
+          setTimeout(() => {
+            madlib.style.display = 'none';
+            initialButton.style.display = 'none';
+            typeText(header, "Want me to<br>follow up?", () => {
+              contact.style.display = 'block';
+              contact.offsetHeight;
+              contact.classList.add('fade-in');
+              setTimeout(() => {
+                sendButton.style.display = 'block';
+                sendButton.offsetHeight;
+                sendButton.classList.add('fade-in');
+                setTimeout(() => {
+                  const subtitle = document.querySelector('.final-subtitle');
+                  subtitle.style.display = 'block';
+                  subtitle.offsetHeight;
+                  subtitle.classList.add('fade-in');
+                }, 200);
+              }, 200);
+            });
+          }, 500);
+        });
+
+        // Function to calculate the appropriate font size
+        const calculateFontSize = (text) => {
+          const length = text.length;
+          if (length > 18) {
+            return Math.max(0.35, 2 * Math.pow(0.96, length - 18));
+          }
+          return 2;
+        };
+
+        // Handle both placeholder and input text resizing
+        inputs.forEach((input, i) => {
+          input.placeholder = placeholders[randomIndex][i];
+          const initialSize = calculateFontSize(input.placeholder);
+          input.style.fontSize = initialSize + 'rem';
+          
+          input.addEventListener('input', function() {
+            if (this.value) {
+              const newSize = calculateFontSize(this.value);
+              this.style.fontSize = newSize + 'rem';
+            } else {
+              const placeholderSize = calculateFontSize(this.placeholder);
+              this.style.fontSize = placeholderSize + 'rem';
+            }
+          });
+        });
+
+        // Handle contact input resizing
+        const contactInput = document.getElementById('contact');
+        // Set initial size based on placeholder
+        const initialContactSize = calculateFontSize(contactInput.placeholder);
+        contactInput.style.fontSize = initialContactSize + 'rem';
+        
+        contactInput.addEventListener('input', function() {
+          if (this.value) {
+            const newSize = calculateFontSize(this.value);
+            this.style.fontSize = newSize + 'rem';
+          } else {
+            const placeholderSize = calculateFontSize(this.placeholder);
+            this.style.fontSize = placeholderSize + 'rem';
+          }
+        });
+
+        // Handle final form submission
+        document.querySelector('.send-button').addEventListener('click', async function() {
+          const whatText = document.getElementById('what').value || document.getElementById('what').placeholder;
+          const doesText = document.getElementById('does').value || document.getElementById('does').placeholder;
+          const contactInfo = document.getElementById('contact').value;
+          
+          if (!contactInfo) {
+            alert('Please enter your contact info!');
+            return;
+          }
+
+          try {
+            const response = await fetch('https://formspree.io/f/mwpljayb', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                idea: `I want to build a ${whatText} that ${doesText}.`,
+                contact: contactInfo
+              })
+            });
+
+            if (response.ok) {
+              // Success animation
+              const contact = document.querySelector('.contact-form');
+              const sendButton = document.querySelector('.send-button');
+              const subtitle = document.querySelector('.final-subtitle');
+              const header = document.querySelector('.header');
+
+              contact.classList.add('fade-out');
+              sendButton.classList.add('fade-out');
+              subtitle.classList.add('fade-out');
+              
+              setTimeout(() => {
+                contact.style.display = 'none';
+                sendButton.style.display = 'none';
+                subtitle.style.display = 'none';
+                typeText(header, "Thanks!<br>I'll be in touch.", null);
+              }, 500);
+            } else {
+              throw new Error('Failed to send');
+            }
+          } catch (error) {
+            alert('Oops! Something went wrong. Please try again.');
+          }
+        });
+      }
+    </script>
   </body>
 </html>
