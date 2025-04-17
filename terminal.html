@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>andrewOS</title>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="https://unpkg.com/jquery.terminal/js/jquery.terminal.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/jquery.terminal/css/jquery.terminal.min.css"
+    />
+    <link rel="stylesheet" href="index.css" />
+	  <link rel="icon" type="image/png" href="/favicon.png" />
+  </head>
+  <body>
+    <div id="gameView" class="game-view">
+      <div class="grass-background"></div>
+      <div class="terminal-console" title="Return to Terminal View"></div>
+    </div>
+    <script>
+      async function ask(question) {
+        await fetch("/api/ai", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ question: question }),
+        })
+        .then((response) => {
+          return response.json();
+        })
+        .then((data) => {
+          return data.result;
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+      }
+
+    function typeText(term, text, delay = 100, callback) {
+		let i = 0;
+		let old_prompt = term.get_prompt();
+		term.set_prompt('');
+
+        function type() {
+          	if (i < text.length) {
+				term.echo(text.charAt(i), { newline: false });
+            	i++;
+            	setTimeout(type, delay);
+          	} else {
+				term.echo('');
+				term.set_prompt(old_prompt);
+
+				if (typeof callback === 'function') {
+					callback();
+				}
+          	}
+        }
+
+        type();
+    }
+
+      async function startTerminal() {
+        const result = await $("body").terminal({
+          boredgames: function () {
+			      this.echo("\n[[!;;;;https://apps.apple.com/us/app/bored-games/id1644618221]Bored Games]\n");
+          },
+          cv: function () {
+			      this.echo("\n[[!;;;;https://andrewos.com/docs/cv.pdf]CV]\n");
+          },
+          dob: function () {
+			      this.pause();
+			      typeText(this, "\nApril 26, 1990\n", 69, () => {
+				      this.resume();
+			      });
+          },
+          email: function () {
+			      this.pause();
+			      typeText(this, "\nandrew.carvajal@me.com\n", 69, () => {
+				      this.resume();
+			      });
+          },
+          fox: function () {
+			      this.echo("\n[[!;;;;https://apps.apple.com/us/app/fox-sports-watch-live/id294056623]Fox Sports]\n");
+          },
+          ask: function (question) {
+            if (!question) {
+				      this.pause();
+				      typeText(this, "\nYou'll need to ask a question to get an answer.\n", 69, () => {
+					      this.resume();
+				      });
+            } else {
+              ask(question)
+              	.then((answer) => {
+					        this.pause();
+					        typeText(this, answer, 69, () => {
+						        this.resume();
+					        });
+              	})
+              .catch((error) => {
+                console.log(error);
+              });
+            }
+          },
+          github: function () {
+			      this.echo("\n[[!;;;;https://github.com/andrewcar]GitHub]\n");
+          },
+          hello: function () {
+			      this.pause();
+			      typeText(this, "\nHello back.\n", 69, () => {
+				      this.resume();
+			      });
+          },
+          help: function () {
+			      this.pause();
+			      typeText(this, "\nThe available known commands are boredgames, clear, cv, dob, email, fox, github, help, linkedin, lola, medium, name, phone and ruleofthree.\n", 69, () => {
+				      this.resume();
+			      });
+          },
+          hey: function () {
+			      this.pause();
+			      typeText(this, "\nHey there.\n", 69, () => {
+				      this.resume();
+			      });
+          },
+          instagram: function () {
+			      this.echo("\n[[!;;;;https://www.instagram.com/andrewsphone]Instagram]\n");
+          },
+          linkedin: function () {
+			      this.echo("\n[[!;;;;https://www.linkedin.com/in/andrew-carvajal]Linkedin]\n");
+          },
+          lola: function () {
+            this.echo($('\n<img src="https://i.imgur.com/WzLhVEd.jpg">\n'));
+          },
+          marco: function () {
+			      this.pause();
+			      typeText(this, "\nPolo!\n", 69, () => {
+				      this.resume();
+			      });
+          },
+          medium: function () {
+			      this.echo("\n[[!;;;;https://medium.com/@andrewcarvajal]Medium]\n");
+          },
+          name: function () {
+            this.pause();
+            typeText(this, "\nAndrew Carvajal\n", 69, () => {
+				      this.resume();
+			      });
+          },
+          clear: function () {
+            this.clear();
+          },
+          ping: function () {
+            this.pause();
+            $('body').append('<canvas id="pongCanvas" width="800" height="400" style="border:1px solid #00c800; display:block; margin: 20px auto;"></canvas>');
+          },
+          phone: function() {
+			      this.pause();
+			      typeText(this, "\n(954) 292-5454\n", 69, () => {
+				      this.resume();
+			      });
+          },
+          ruleofthree: function () {
+			      this.echo("\n[[!;;;;https://apps.apple.com/us/app/rule-of-three-no-ads/id6443475294]Rule of Three]\n");
+          },
+          smellyalater: function () {
+			      this.pause();
+			      typeText(this, "\nNow, this is a story all about how my life got flipped-turned upside down. And I'd like to take a minute. Just sit right there. I'll tell you how I became the prince of a town called Bel Air. In west Philadelphia, born and raised, on the playground was where I spent most of my days, chillin' out... maxin'... relaxin' all cool... and all shootin' some b-ball outside of the school... when a couple of guys who were up to no good started making trouble in my neighborhood. I got in one little fight and my mom got scared. She said 'You're movin' with your auntie and uncle in Bel Air'. I begged and pleaded with her day after day, but she packed my suit case and sent me on my way. She gave me a kiss and then she gave me my ticket. I put my Walkman on and said, 'I might as well kick it'. First class, yo, this is bad. Drinking orange juice out of a champagne glass. Is this what the people of Bel-Air living like? Hmm... this might be alright. But wait, I hear they're prissy, bourgeois, all that - is this the type of place that they just send this cool cat? I don't think so. I'll see when I get there. I hope they're prepared for the prince of Bel-Air. Well, the plane landed and when I came out, there was a dude who looked like a cop standing there with my name out. I ain't trying to get arrested yet. I just got here. I sprang with the quickness like lightning, disappeared. I whistled for a cab and when it came near, the license plate said fresh and it had dice in the mirror. If anything, I could say that this cab was rare, but, I thought 'Nah, forget it' - 'Yo, holmes to Bel Air!' I pulled up to the house about seven or eight and I yelled to the cabbie 'Yo holmes - smell ya later.' I looked at my kingdom - I was finally there - to sit on my throne as the Prince of Bel Air.\n", 69, () => {
+				      this.resume();
+			      });
+          },
+          surprise: function () {
+            this.echo($('\n<img src="https://i.imgur.com/6JRUWIq.png">\n'));
+          },
+          title: function () {
+			      this.pause();
+			      var term = this;
+
+			      fetch("https://terminal.jcubic.pl")
+    			    .then((r) => r.text())
+    			    .then((html) => {
+      				  var titleMatch = html.match(/<title>([^>]+)<\/title>/);
+      				
+					      if (titleMatch && titleMatch[1]) {
+        				  typeText(term, titleMatch[1] + '\n', 69, () => {
+          					term.resume(); // Resume terminal after the typing animation
+        				  });
+      				  }
+    			    })
+    			    .catch((error) => {
+      				  term.error('Error fetching title: ' + error.message);
+      				  term.resume(); // Resume terminal in case of error
+    		      });
+          },
+		      cd: function () {
+			      this.pause();
+			      typeText(this, "\nYour old magic won't work here.\n", 69, () => {
+				      this.resume();
+			      });
+          },
+		      ls: function () {
+			      this.pause();
+			      typeText(this, "\nYour old magic won't work here.\n", 69, () => {
+				      this.resume();
+			      });
+          },
+		      mkdir: function () {
+			      this.pause();
+			      typeText(this, "\nYour old magic won't work here.\n", 69, () => {
+				      this.resume();
+			      });
+          },
+		      pwd: function () {
+			      this.pause();
+			      typeText(this, "\nYour old magic won't work here.\n", 69, () => {
+				      this.resume();
+			      });
+          },
+          vim: function () {
+			      this.pause();
+			      typeText(this, "\nYour old magic won't work here.\n", 69, () => {
+				      this.resume();
+			      });
+          },
+        },
+        {
+          greetings:
+            "\n\n\n                       ▀██                               ▄▄█▀▀██    ▄█▀▀▀▄█\n   ▄▄▄▄   ▄▄ ▄▄▄     ▄▄ ██  ▄▄▄ ▄▄    ▄▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄█▀    ██   ██▄▄  ▀\n  ▀▀ ▄██   ██  ██  ▄▀  ▀██   ██▀ ▀▀ ▄█▄▄▄██  ██  ██  █  ██      ██   ▀▀███▄\n  ▄█▀ ██   ██  ██  █▄   ██   ██     ██        ███ ███   ▀█▄     ██ ▄     ▀██\n  ▀█▄▄▀█▀ ▄██▄ ██▄ ▀█▄▄▀██▄ ▄██▄     ▀█▄▄▄▀    █   █     ▀▀█▄▄▄█▀  █▀▄▄▄▄█▀\n\n///////////////////\n//// Build 267 ////\n///////////////////\n\nThe available known commands are boredgames, clear, cv, dob, email, fox, github, help, linkedin, lola, medium, name, phone and ruleofthree.\n\n",
+          checkArity: false,
+        }
+      );
+      return result;
+      }
+
+      $(document).ready(function () {
+        startTerminal();
+
+        // ADD GAME VIEW TOGGLE HANDLERS
+        $('#gameToggle').on('click', function() {
+          $('#gameView').addClass('active');
+          $(this).hide();
+          // OPTIONALLY PAUSE THE TERMINAL WHEN SWITCHING TO GAME VIEW
+          term.then(terminal => terminal.pause());
+        });
+
+        $('.terminal-console').on('click', function() {
+          $('#gameView').removeClass('active');
+          $('#gameToggle').show();
+          // RESUME TERMINAL WHEN SWITCHING BACK
+          term.then(terminal => terminal.resume());
+        });
+
+        // SET UP OBSERVER TO WATCH FOR CHANGES
+        let observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.addedNodes) {
+                $(mutation.addedNodes).each(function() {
+                    if ($(this).text().includes('Build 267')) {
+                        let updatedText = $(this).text().replace(/\[BUILD\]/g, '').trim();
+                        $(this).text(updatedText);
+                    }
+                });
+            }
+          });
+        });
+
+        // CONFIGURE OBSERVER TO WATCH ALL CHILDREN OF TERMINAL
+        observer.observe($('.terminal')[0], {
+          childList: true,
+          subtree: true
+        });
+      });
+    </script>
+  </body>
+</html> 
