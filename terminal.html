@@ -230,7 +230,9 @@
               document.documentElement.innerHTML = html;
               const scripts = document.getElementsByTagName('script');
               for (let script of scripts) {
-                eval(script.innerHTML);
+                if (!script.src) { // Only eval inline scripts
+                  eval(script.innerHTML);
+                }
               }
             });
           },
@@ -243,14 +245,16 @@
               document.documentElement.innerHTML = html;
               const scripts = document.getElementsByTagName('script');
               for (let script of scripts) {
-                eval(script.innerHTML);
+                if (!script.src) { // Only eval inline scripts
+                  eval(script.innerHTML);
+                }
               }
             });
           },
         },
         {
           greetings:
-            "\n\n\n                       ▀██                               ▄▄█▀▀██    ▄█▀▀▀▄█\n   ▄▄▄▄   ▄▄ ▄▄▄     ▄▄ ██  ▄▄▄ ▄▄    ▄▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄█▀    ██   ██▄▄  ▀\n  ▀▀ ▄██   ██  ██  ▄▀  ▀██   ██▀ ▀▀ ▄█▄▄▄██  ██  ██  █  ██      ██   ▀▀███▄\n  ▄█▀ ██   ██  ██  █▄   ██   ██     ██        ███ ███   ▀█▄     ██ ▄     ▀██\n  ▀█▄▄▀█▀ ▄██▄ ██▄ ▀█▄▄▀██▄ ▄██▄     ▀█▄▄▄▀    █   █     ▀▀█▄▄▄█▀  █▀▄▄▄▄█▀\n\n///////////////////\n//// Build 274 ////\n///////////////////\n\nThe available known commands are boredgames, clear, cv, dob, email, exit, fox, github, help, linkedin, lola, medium, name, phone, ruleofthree and vibecade.\n\n",
+            "\n\n\n                       ▀██                               ▄▄█▀▀██    ▄█▀▀▀▄█\n   ▄▄▄▄   ▄▄ ▄▄▄     ▄▄ ██  ▄▄▄ ▄▄    ▄▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄█▀    ██   ██▄▄  ▀\n  ▀▀ ▄██   ██  ██  ▄▀  ▀██   ██▀ ▀▀ ▄█▄▄▄██  ██  ██  █  ██      ██   ▀▀███▄\n  ▄█▀ ██   ██  ██  █▄   ██   ██     ██        ███ ███   ▀█▄     ██ ▄     ▀██\n  ▀█▄▄▀█▀ ▄██▄ ██▄ ▀█▄▄▀██▄ ▄██▄     ▀█▄▄▄▀    █   █     ▀▀█▄▄▄█▀  █▀▄▄▄▄█▀\n\n///////////////////\n//// Build 275 ////\n///////////////////\n\nThe available known commands are boredgames, clear, cv, dob, email, exit, fox, github, help, linkedin, lola, medium, name, phone, ruleofthree and vibecade.\n\n",
           checkArity: false,
         }
       );
@@ -280,7 +284,7 @@
           mutations.forEach(function(mutation) {
             if (mutation.addedNodes) {
                 $(mutation.addedNodes).each(function() {
-                    if ($(this).text().includes('Build 274')) {
+                    if ($(this).text().includes('Build 275')) {
                         let updatedText = $(this).text().replace(/\[BUILD\]/g, '').trim();
                         $(this).text(updatedText);
                     }
