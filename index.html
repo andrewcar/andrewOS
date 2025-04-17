@@ -12,6 +12,10 @@
 	  <link rel="icon" type="image/png" href="/favicon.png" />
   </head>
   <body>
+    <div id="gameView" class="game-view">
+      <div class="grass-background"></div>
+      <div class="terminal-console" title="Return to Terminal View"></div>
+    </div>
     <script>
 
       async function ask(question) {
@@ -230,6 +234,21 @@
 
       $(document).ready(function () {
         startTerminal();
+
+        // ADD GAME VIEW TOGGLE HANDLERS
+        $('#gameToggle').on('click', function() {
+          $('#gameView').addClass('active');
+          $(this).hide();
+          // OPTIONALLY PAUSE THE TERMINAL WHEN SWITCHING TO GAME VIEW
+          term.then(terminal => terminal.pause());
+        });
+
+        $('.terminal-console').on('click', function() {
+          $('#gameView').removeClass('active');
+          $('#gameToggle').show();
+          // RESUME TERMINAL WHEN SWITCHING BACK
+          term.then(terminal => terminal.resume());
+        });
 
         // SET UP OBSERVER TO WATCH FOR CHANGES
         let observer = new MutationObserver(function(mutations) {
