@@ -163,37 +163,55 @@
       }
 
       @media (max-width: 768px) {
+        body {
+          padding: 2rem;
+          justify-content: center;
+          min-height: 100vh;
+        }
+
+        .ascii-art {
+          display: none; /* Hide on mobile to save space */
+        }
+
         .header {
-          font-size: 5.85rem; /* 30% increase from 4.5rem */
+          font-size: 8rem; /* Much larger */
+          margin-bottom: 4rem;
+          line-height: 1;
         }
         
         .madlib {
-          font-size: 3.38rem; /* 69% increase from 2rem */
+          font-size: 4.5rem; /* Much larger */
+          line-height: 1.5;
+          margin-bottom: 4rem;
         }
         
         .madlib input {
-          font-size: 3.38rem; /* 69% increase from 2rem */
-          width: 80vw; /* Make input width responsive */
+          font-size: 4.5rem; /* Match madlib text */
+          width: 90vw; /* Almost full width */
+          margin: 1rem 0;
         }
         
         .contact-form {
-          font-size: 4rem; /* 100% increase from 2rem */
+          font-size: 5rem; /* Much larger */
+          margin-bottom: 4rem;
         }
         
         .contact-form input {
-          font-size: 4rem; /* 100% increase from 2rem */
-          width: 80vw; /* Make input width responsive */
+          font-size: 5rem; /* Match contact form text */
+          width: 90vw; /* Almost full width */
         }
         
         .initial-button,
         .send-button {
-          font-size: 3rem; /* 100% increase from 1.5rem */
-          padding: 1.5rem 3rem; /* Increased padding for larger touch target */
+          font-size: 4rem; /* Much larger */
+          padding: 2rem 4rem;
+          border-radius: 20px; /* Larger radius for bigger button */
+          margin-top: 3rem;
         }
         
         .final-subtitle {
-          font-size: 1.56rem; /* 30% increase from 1.2rem */
-          margin-top: 2rem; /* Increased spacing from button by ~20pts */
+          font-size: 2.5rem;
+          margin-top: 3rem;
         }
       }
     </style>
