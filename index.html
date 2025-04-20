@@ -245,6 +245,41 @@
         opacity: 1;
         transform: translateY(0);
       }
+
+      /* X (Twitter) Button Styles */
+      .x-button {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 999;
+        opacity: 0;
+        transform: translateY(10px);
+        transition: opacity 0.5s ease, transform 0.5s ease;
+        width: 48px;
+        height: 48px;
+        background: #000;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        text-decoration: none;
+      }
+
+      .x-button svg {
+        width: 24px;
+        height: 24px;
+        fill: #fff;
+      }
+
+      .x-button.fade-in {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .x-button:hover {
+        transform: translateY(-2px);
+      }
       
       @media screen and (max-width: 428px) {
         body {
@@ -257,6 +292,18 @@
           bottom: 1rem;
           right: 1rem;
           max-width: 160px !important;
+        }
+
+        .x-button {
+          bottom: 1rem;
+          right: 1rem;
+          width: 40px;
+          height: 40px;
+        }
+
+        .x-button svg {
+          width: 20px;
+          height: 20px;
         }
       }
     </style>
@@ -517,6 +564,27 @@
             kofiIframe.parentElement.classList.add('floating-kofi-button');
             setTimeout(() => {
               kofiIframe.parentElement.classList.add('fade-in');
+            }, 200);
+          }
+        }, 1000);
+      });
+    </script>
+
+    <!-- X (Twitter) Button -->
+    <a href="https://x.com/andrewslaptop" target="_blank" class="x-button">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+      </svg>
+    </a>
+
+    <script>
+      // Add animation to make the X button appear smoothly
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(() => {
+          const xButton = document.querySelector('.x-button');
+          if (xButton) {
+            setTimeout(() => {
+              xButton.classList.add('fade-in');
             }, 200);
           }
         }, 1000);
