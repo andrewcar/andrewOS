@@ -228,17 +228,127 @@
               const response = await fetch('/');
               const html = await response.text();
               document.documentElement.innerHTML = html;
-              // Execute all scripts
-              const scripts = document.getElementsByTagName('script');
-              for (let script of scripts) {
-                if (!script.src) { // Only eval inline scripts
-                  eval(script.innerHTML);
+              
+              // First, load all external resources
+              await Promise.all([
+                new Promise((resolve) => {
+                  const script = document.createElement('script');
+                  script.src = 'https://storage.ko-fi.com/cdn/scripts/overlay-widget.js';
+                  script.onload = resolve;
+                  document.head.appendChild(script);
+                })
+              ]);
+
+              // Now execute the window.onload function directly
+              const randomIndex = Math.floor(Math.random() * (placeholders.length - 1));
+              const inputs = document.querySelectorAll('.madlib input');
+              
+              // Initial animation sequence
+              const header = document.querySelector('.header');
+              typeText(header, "Let's build<br>something.", () => {
+                setTimeout(() => {
+                  document.querySelector('.madlib').classList.add('fade-in');
+                  setTimeout(() => {
+                    document.querySelector('.initial-button').classList.add('fade-in');
+                  }, 200);
+                }, 200);
+              });
+
+              // Set up all the event listeners and handlers
+              document.querySelector('.initial-button').addEventListener('click', function() {
+                const madlib = document.querySelector('.madlib');
+                const contact = document.querySelector('.contact-form');
+                const header = document.querySelector('.header');
+                const initialButton = document.querySelector('.initial-button');
+                const sendButton = document.querySelector('.send-button');
+                
+                madlib.classList.add('fade-out');
+                initialButton.classList.add('fade-out');
+                
+                setTimeout(() => {
+                  madlib.style.display = 'none';
+                  initialButton.style.display = 'none';
+                  typeText(header, "Want me to<br>follow up?", () => {
+                    contact.style.display = 'block';
+                    contact.offsetHeight;
+                    contact.classList.add('fade-in');
+                    setTimeout(() => {
+                      sendButton.style.display = 'block';
+                      sendButton.offsetHeight;
+                      sendButton.classList.add('fade-in');
+                      setTimeout(() => {
+                        const subtitle = document.querySelector('.final-subtitle');
+                        subtitle.style.display = 'block';
+                        subtitle.offsetHeight;
+                        subtitle.classList.add('fade-in');
+                      }, 600);
+                    }, 600);
+                  });
+                }, 500);
+              });
+
+              // Handle input sizing
+              const calculateFontSize = (text) => {
+                const length = text.length;
+                if (length > 18) {
+                  return Math.max(0.35, 2 * Math.pow(0.96, length - 18));
                 }
-              }
-              // Manually trigger the window.onload event to initialize components
-              if (window.onload) {
-                window.onload();
-              }
+                return 2;
+              };
+
+              inputs.forEach((input, i) => {
+                input.placeholder = placeholders[randomIndex][i];
+                const initialSize = calculateFontSize(input.placeholder);
+                input.style.fontSize = initialSize + 'rem';
+                
+                input.addEventListener('input', function() {
+                  if (this.value) {
+                    const newSize = calculateFontSize(this.value);
+                    this.style.fontSize = newSize + 'rem';
+                  } else {
+                    const placeholderSize = calculateFontSize(this.placeholder);
+                    this.style.fontSize = placeholderSize + 'rem';
+                  }
+                });
+              });
+
+              // Handle contact input
+              const contactInput = document.getElementById('contact');
+              const initialContactSize = calculateFontSize(contactInput.placeholder);
+              contactInput.style.fontSize = initialContactSize + 'rem';
+              
+              contactInput.addEventListener('input', function() {
+                if (this.value) {
+                  const newSize = calculateFontSize(this.value);
+                  this.style.fontSize = newSize + 'rem';
+                } else {
+                  const placeholderSize = calculateFontSize(this.placeholder);
+                  this.style.fontSize = placeholderSize + 'rem';
+                }
+              });
+
+              // Set up Ko-fi widget
+              kofiWidgetOverlay.draw('andrewos', {
+                'type': 'floating-chat',
+                'floating-chat.donateButton.text': 'Support',
+                'floating-chat.donateButton.background-color': '#2ecc71',
+                'floating-chat.donateButton.text-color': '#ffffff',
+                'floating-chat.width': 'auto',
+                'floating-chat.position.bottom': '32px',
+                'floating-chat.position.right': '16px',
+                'floating-chat.animation.type': 'fade-in'
+              });
+
+              // Add animation to Ko-fi button
+              setTimeout(() => {
+                const kofiIframe = document.querySelector('iframe[title="Ko-fi donations"]');
+                if (kofiIframe) {
+                  kofiIframe.parentElement.classList.add('floating-kofi-button');
+                  setTimeout(() => {
+                    kofiIframe.parentElement.classList.add('fade-in');
+                  }, 200);
+                }
+              }, 1000);
             });
           },
           vibecade: function () {
@@ -259,7 +369,7 @@
         },
         {
           greetings:
-            "\n\n\n                       ▀██                               ▄▄█▀▀██    ▄█▀▀▀▄█\n   ▄▄▄▄   ▄▄ ▄▄▄     ▄▄ ██  ▄▄▄ ▄▄    ▄▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄█▀    ██   ██▄▄  ▀\n  ▀▀ ▄██   ██  ██  ▄▀  ▀██   ██▀ ▀▀ ▄█▄▄▄██  ██  ██  █  ██      ██   ▀▀███▄\n  ▄█▀ ██   ██  ██  █▄   ██   ██     ██        ███ ███   ▀█▄     ██ ▄     ▀██\n  ▀█▄▄▀█▀ ▄██▄ ██▄ ▀█▄▄▀██▄ ▄██▄     ▀█▄▄▄▀    █   █     ▀▀█▄▄▄█▀  █▀▄▄▄▄█▀\n\n///////////////////\n//// Build 290 ////\n///////////////////\n\nThe available known commands are boredgames, clear, cv, dob, email, exit, fox, github, help, linkedin, lola, medium, name, phone, ruleofthree and vibecade.\n\n",
+            "\n\n\n                       ▀██                               ▄▄█▀▀██    ▄█▀▀▀▄█\n   ▄▄▄▄   ▄▄ ▄▄▄     ▄▄ ██  ▄▄▄ ▄▄    ▄▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄█▀    ██   ██▄▄  ▀\n  ▀▀ ▄██   ██  ██  ▄▀  ▀██   ██▀ ▀▀ ▄█▄▄▄██  ██  ██  █  ██      ██   ▀▀███▄\n  ▄█▀ ██   ██  ██  █▄   ██   ██     ██        ███ ███   ▀█▄     ██ ▄     ▀██\n  ▀█▄▄▀█▀ ▄██▄ ██▄ ▀█▄▄▀██▄ ▄██▄     ▀█▄▄▄▀    █   █     ▀▀█▄▄▄█▀  █▀▄▄▄▄█▀\n\n///////////////////\n//// Build 291 ////\n///////////////////\n\nThe available known commands are boredgames, clear, cv, dob, email, exit, fox, github, help, linkedin, lola, medium, name, phone, ruleofthree and vibecade.\n\n",
           checkArity: false,
         }
       );
@@ -289,7 +399,7 @@
           mutations.forEach(function(mutation) {
             if (mutation.addedNodes) {
                 $(mutation.addedNodes).each(function() {
-                    if ($(this).text().includes('Build 290')) {
+                    if ($(this).text().includes('Build 291')) {
                         let updatedText = $(this).text().replace(/\[BUILD\]/g, '').trim();
                         $(this).text(updatedText);
                     }
