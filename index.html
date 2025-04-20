@@ -454,5 +454,58 @@
         });
       }
     </script>
+    
+    <!-- Ko-fi button styles -->
+    <style>
+      .floating-kofi-button {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 999;
+        opacity: 0;
+        transform: translateY(10px);
+        transition: opacity 0.5s ease, transform 0.5s ease;
+      }
+      
+      .floating-kofi-button.fade-in {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      
+      @media screen and (max-width: 428px) {
+        .floating-kofi-button {
+          bottom: 1rem;
+          right: 1rem;
+        }
+      }
+    </style>
+
+    <!-- Ko-fi widget -->
+    <script src='https://storage.ko-fi.com/cdn/scripts/overlay-widget.js'></script>
+    <script>
+      kofiWidgetOverlay.draw('andrewos', {
+        'type': 'floating-chat',
+        'floating-chat.donateButton.text': 'Support My Work',
+        'floating-chat.donateButton.background-color': '#000000',
+        'floating-chat.donateButton.text-color': '#ffffff',
+        'floating-chat.width': '100%',
+        'floating-chat.position.bottom': '70px',
+        'floating-chat.position.right': '20px',
+        'floating-chat.animation.type': 'fade-in'
+      });
+      
+      // Add animation to make the button appear smoothly
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(() => {
+          const kofiIframe = document.querySelector('iframe[title="Ko-fi donations"]');
+          if (kofiIframe) {
+            kofiIframe.parentElement.classList.add('floating-kofi-button');
+            setTimeout(() => {
+              kofiIframe.parentElement.classList.add('fade-in');
+            }, 200);
+          }
+        }, 1000);
+      });
+    </script>
   </body>
 </html>
