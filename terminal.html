@@ -231,6 +231,22 @@
               
               // First, load all external resources
               await Promise.all([
+                // Load jQuery
+                new Promise((resolve) => {
+                  const script = document.createElement('script');
+                  script.src = 'https://code.jquery.com/jquery-3.3.1.min.js';
+                  script.onload = resolve;
+                  document.head.appendChild(script);
+                }),
+                // Load stylesheets
+                new Promise((resolve) => {
+                  const link = document.createElement('link');
+                  link.rel = 'stylesheet';
+                  link.href = 'index.css';
+                  link.onload = resolve;
+                  document.head.appendChild(link);
+                }),
+                // Load Ko-fi widget
                 new Promise((resolve) => {
                   const script = document.createElement('script');
                   script.src = 'https://storage.ko-fi.com/cdn/scripts/overlay-widget.js';
@@ -239,7 +255,22 @@
                 })
               ]);
 
-              // Now execute the window.onload function directly
+              // Wait for DOM to be ready
+              await new Promise(resolve => {
+                if (document.readyState === 'loading') {
+                  document.addEventListener('DOMContentLoaded', resolve);
+                } else {
+                  resolve();
+                }
+              });
+
+              // Now execute window.onload function
+              const placeholders = [
+                ["a weird website", "helps people flirt with AI"],
+                ["a talking button", "writes code while you nap"],
+                [""]
+              ];
+              
               const randomIndex = Math.floor(Math.random() * (placeholders.length - 1));
               const inputs = document.querySelectorAll('.madlib input');
               
@@ -296,6 +327,7 @@
                 return 2;
               };
 
+              // Handle both placeholder and input text resizing
               inputs.forEach((input, i) => {
                 input.placeholder = placeholders[randomIndex][i];
                 const initialSize = calculateFontSize(input.placeholder);
@@ -312,7 +344,7 @@
                 });
               });
 
-              // Handle contact input
+              // Handle contact input resizing
               const contactInput = document.getElementById('contact');
               const initialContactSize = calculateFontSize(contactInput.placeholder);
               contactInput.style.fontSize = initialContactSize + 'rem';
