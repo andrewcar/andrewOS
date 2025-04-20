@@ -465,6 +465,7 @@
         opacity: 0;
         transform: translateY(10px);
         transition: opacity 0.5s ease, transform 0.5s ease;
+        max-width: calc(100% - 4rem); /* Prevent overflow */
       }
       
       .floating-kofi-button.fade-in {
@@ -476,6 +477,7 @@
         .floating-kofi-button {
           bottom: 1rem;
           right: 1rem;
+          max-width: calc(100% - 2rem);
         }
       }
     </style>
@@ -488,9 +490,9 @@
         'floating-chat.donateButton.text': 'Support My Work',
         'floating-chat.donateButton.background-color': '#000000',
         'floating-chat.donateButton.text-color': '#ffffff',
-        'floating-chat.width': '100%',
+        'floating-chat.width': '300px', /* Set explicit width */
         'floating-chat.position.bottom': '70px',
-        'floating-chat.position.right': '20px',
+        'floating-chat.position.right': '32px',
         'floating-chat.animation.type': 'fade-in'
       });
       
