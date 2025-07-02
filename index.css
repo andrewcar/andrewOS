@@ -9,6 +9,13 @@ html, body {
   --glow: 1;
 }
 
+/* ASCII logo specific styling */
+.ascii-logo {
+  white-space: pre !important;
+  display: block;
+  line-height: 1.2;
+}
+
 @media screen and (min-width: 1200px) {
   :root {
     --size: 1.5;
@@ -21,6 +28,44 @@ html, body {
 @media (max-width: 600px) {
   .terminal-output div:last-child {
     font-size: 20px !important;
+  }
+  
+  /* Fix for ASCII art in portrait mode */
+  .terminal-output div div {
+    white-space: pre !important;
+    font-size: 8px !important;
+    line-height: 1.2 !important;
+  }
+  
+  .ascii-logo {
+    font-size: 7px !important;
+    transform: scale(0.95);
+    transform-origin: left top;
+    overflow: visible !important;
+  }
+}
+
+/* Fix for terminal ASCII art on very narrow screens */
+@media (max-width: 375px) {
+  .terminal-output div div {
+    font-size: 6px !important;
+    transform: scale(0.9);
+    transform-origin: left top;
+  }
+  
+  .ascii-logo {
+    font-size: 5px !important;
+    transform: scale(0.9);
+    letter-spacing: -0.5px;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 320px) {
+  .ascii-logo {
+    font-size: 4px !important;
+    transform: scale(0.85);
+    letter-spacing: -0.7px;
   }
 }
 
