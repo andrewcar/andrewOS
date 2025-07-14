@@ -4,6 +4,22 @@ html, body {
   padding: 0;
 }
 
+/* ASCII Art Header Styles */
+.ascii-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: #000;
+  padding: 10px;
+  border-bottom: 1px solid var(--color);
+  font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
+  line-height: 1.1;
+  white-space: pre;
+  text-align: center;
+  overflow: hidden;
+  color: var(--color);
+}
+
 /* Mobile height fix */
 @media screen and (max-width: 768px) {
   html, body {
@@ -26,28 +42,25 @@ html, body {
   }
   
   .terminal .terminal-output {
-    height: calc(100vh - 60px) !important;
-    height: calc(100svh - 60px) !important;
+    height: calc(100vh - 140px) !important;
+    height: calc(100svh - 140px) !important;
     overflow-y: auto;
     padding: 10px;
+    padding-top: 0px; /* Remove top padding since header provides spacing */
   }
   
   .terminal .terminal-scroller {
     height: 100% !important;
   }
   
-  /* ASCII art mobile optimization */
+  /* ASCII art mobile optimization - remove old styles */
   .terminal-output div:first-child {
-    font-family: 'Courier New', 'Monaco', 'Menlo', monospace !important;
-    font-size: 12px !important;
-    line-height: 1.2 !important;
-    letter-spacing: 0 !important;
-    word-spacing: 0 !important;
-    white-space: pre !important;
-    overflow-x: auto;
-    text-rendering: optimizeSpeed;
-    -webkit-font-feature-settings: "kern" 0;
-    font-feature-settings: "kern" 0;
+    display: none !important; /* Hide the original ASCII art in terminal output */
+  }
+  
+  .ascii-header {
+    padding: 5px;
+    font-size: 6px; /* Will be dynamically calculated */
   }
   
   /* Input line mobile optimization */
@@ -57,6 +70,22 @@ html, body {
   
   .terminal .terminal-command {
     font-size: 16px !important;
+  }
+}
+
+/* Desktop ASCII header */
+@media screen and (min-width: 769px) {
+  .ascii-header {
+    font-size: 14px;
+    padding: 15px;
+  }
+  
+  .terminal-output div:first-child {
+    display: none !important; /* Hide the original ASCII art in terminal output */
+  }
+  
+  .terminal .terminal-output {
+    padding-top: 0px; /* Remove top padding since header provides spacing */
   }
 }
 
@@ -71,6 +100,10 @@ html, body {
   }
   .terminal-output div:last-child {
     font-size: var(--size) !important;
+  }
+  
+  .ascii-header {
+    font-size: 16px;
   }
 }
 
