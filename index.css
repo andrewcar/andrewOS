@@ -60,7 +60,7 @@ html, body {
   /* Extra small screens - more aggressive sizing */
   @media screen and (max-width: 480px) {
     .terminal-output div:first-child {
-      font-size: clamp(5px, 1.5vw, 8px) !important;
+      font-size: clamp(4px, 1.2vw, 6px) !important;
       line-height: 0.9 !important;
     }
   }
