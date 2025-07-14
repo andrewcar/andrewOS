@@ -39,8 +39,8 @@ html, body {
   /* ASCII art logo - dynamic responsive sizing */
   .terminal-output div:first-child {
     font-family: 'Courier New', 'Monaco', 'Menlo', monospace !important;
-    font-size: clamp(8px, 2.5vw, 14px) !important;
-    line-height: 1.1 !important;
+    font-size: clamp(6px, 1.8vw, 14px) !important;
+    line-height: 1.0 !important;
     letter-spacing: 0 !important;
     word-spacing: 0 !important;
     white-space: pre !important;
@@ -55,6 +55,14 @@ html, body {
     margin: 0 !important;
     padding: 10px 0 !important;
     border-bottom: none !important;
+  }
+  
+  /* Extra small screens - more aggressive sizing */
+  @media screen and (max-width: 480px) {
+    .terminal-output div:first-child {
+      font-size: clamp(5px, 1.5vw, 8px) !important;
+      line-height: 0.9 !important;
+    }
   }
   
   /* Input line mobile optimization */
