@@ -4,34 +4,6 @@ html, body {
   padding: 0;
 }
 
-/* ASCII Art Header Styles */
-.ascii-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background-color: #000;
-  padding: 10px;
-  border-bottom: 1px solid var(--color);
-  font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
-  line-height: 1.1;
-  white-space: pre;
-  text-align: center;
-  overflow: hidden;
-  color: var(--color);
-  
-  /* Ensure perfect spacing and font rendering */
-  letter-spacing: 0;
-  word-spacing: 0;
-  font-variant: normal;
-  font-weight: normal;
-  font-style: normal;
-  text-rendering: optimizeSpeed;
-  -webkit-font-smoothing: none;
-  -moz-osx-font-smoothing: unset;
-  font-feature-settings: "kern" 0;
-  -webkit-font-feature-settings: "kern" 0;
-}
-
 /* Mobile height fix */
 @media screen and (max-width: 768px) {
   html, body {
@@ -54,29 +26,35 @@ html, body {
   }
   
   .terminal .terminal-output {
-    height: calc(100vh - 140px) !important;
-    height: calc(100svh - 140px) !important;
+    height: calc(100vh - 60px) !important;
+    height: calc(100svh - 60px) !important;
     overflow-y: auto;
     padding: 10px;
-    padding-top: 0px; /* Remove top padding since header provides spacing */
   }
   
   .terminal .terminal-scroller {
     height: 100% !important;
   }
   
-  /* ASCII art mobile optimization - remove old styles */
+  /* ASCII art logo - dynamic responsive sizing */
   .terminal-output div:first-child {
-    display: none !important; /* Hide the original ASCII art in terminal output */
-  }
-  
-  .ascii-header {
-    padding: 5px;
-    font-size: 8px; /* Will be dynamically calculated - increased minimum */
-    
-    /* Enhanced font rendering for mobile */
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
+    font-family: 'Courier New', 'Monaco', 'Menlo', monospace !important;
+    font-size: clamp(8px, 2.5vw, 14px) !important;
+    line-height: 1.1 !important;
+    letter-spacing: 0 !important;
+    word-spacing: 0 !important;
+    white-space: pre !important;
+    overflow-x: auto;
+    text-rendering: optimizeSpeed;
+    -webkit-font-feature-settings: "kern" 0;
+    font-feature-settings: "kern" 0;
+    position: sticky !important;
+    top: 0 !important;
+    background-color: #000 !important;
+    z-index: 10 !important;
+    margin: 0 !important;
+    padding: 10px 0 !important;
+    border-bottom: none !important;
   }
   
   /* Input line mobile optimization */
@@ -86,26 +64,6 @@ html, body {
   
   .terminal .terminal-command {
     font-size: 16px !important;
-  }
-}
-
-/* Desktop ASCII header */
-@media screen and (min-width: 769px) {
-  .ascii-header {
-    font-size: 14px;
-    padding: 15px;
-    
-    /* Ensure consistent font rendering on desktop */
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
-  }
-  
-  .terminal-output div:first-child {
-    display: none !important; /* Hide the original ASCII art in terminal output */
-  }
-  
-  .terminal .terminal-output {
-    padding-top: 0px; /* Remove top padding since header provides spacing */
   }
 }
 
@@ -120,10 +78,6 @@ html, body {
   }
   .terminal-output div:last-child {
     font-size: var(--size) !important;
-  }
-  
-  .ascii-header {
-    font-size: 16px;
   }
 }
 
