@@ -18,6 +18,18 @@ html, body {
   text-align: center;
   overflow: hidden;
   color: var(--color);
+  
+  /* Ensure perfect spacing and font rendering */
+  letter-spacing: 0;
+  word-spacing: 0;
+  font-variant: normal;
+  font-weight: normal;
+  font-style: normal;
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+  font-feature-settings: "kern" 0;
+  -webkit-font-feature-settings: "kern" 0;
 }
 
 /* Mobile height fix */
@@ -60,7 +72,11 @@ html, body {
   
   .ascii-header {
     padding: 5px;
-    font-size: 6px; /* Will be dynamically calculated */
+    font-size: 8px; /* Will be dynamically calculated - increased minimum */
+    
+    /* Enhanced font rendering for mobile */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
   
   /* Input line mobile optimization */
@@ -78,6 +94,10 @@ html, body {
   .ascii-header {
     font-size: 14px;
     padding: 15px;
+    
+    /* Ensure consistent font rendering on desktop */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
   
   .terminal-output div:first-child {
