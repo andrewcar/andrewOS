@@ -19,22 +19,15 @@
     </div>
     <script>
       async function ask(question) {
-        await fetch("/api/ai", {
+        const response = await fetch("/api/ai", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ question: question }),
-        })
-        .then((response) => {
-          return response.json();
-        })
-        .then((data) => {
-          return data.result;
-        })
-        .catch((error) => {
-          console.log(error);
         });
+        const data = await response.json();
+        return data.result;
       }
 
     function typeText(term, text, delay = 100, callback) {
@@ -61,107 +54,54 @@
     }
 
       async function startTerminal() {
-        const result = await $("body").terminal({
-          boredgames: function () {
-			      this.echo("\n[[!;;;;https://apps.apple.com/us/app/bored-games/id1644618221]Bored Games]\n");
-          },
-          cv: function () {
-			      this.echo("\n[[!;;;;https://andrewos.com/docs/cv.pdf]CV]\n");
-          },
-          dob: function () {
-			      this.pause();
-			      typeText(this, "\nApril 26, 1990\n", 69, () => {
-				      this.resume();
-			      });
-          },
-          email: function () {
-			      this.pause();
-			      typeText(this, "\nandrew.carvajal@me.com\n", 69, () => {
-				      this.resume();
-			      });
-          },
-          fox: function () {
-			      this.echo("\n[[!;;;;https://apps.apple.com/us/app/fox-sports-watch-live/id294056623]Fox Sports]\n");
-          },
-          ask: function (question) {
-            if (!question) {
-				      this.pause();
-				      typeText(this, "\nYou'll need to ask a question to get an answer.\n", 69, () => {
-					      this.resume();
-				      });
-            } else {
-              ask(question)
-              	.then((answer) => {
-					        this.pause();
-					        typeText(this, answer, 69, () => {
-						        this.resume();
-					        });
-              	})
+        const core = await import('/js/terminal-core.js');
+
+        function runResolved(term, resolved) {
+          if (resolved.kind === 'type') {
+            term.pause();
+            typeText(term, resolved.text, 69, () => {
+              term.resume();
+            });
+            return;
+          }
+          if (resolved.kind === 'echo') {
+            term.echo(resolved.text);
+            return;
+          }
+          if (resolved.kind === 'clear') {
+            term.clear();
+            return;
+          }
+          if (resolved.kind === 'ask') {
+            ask(resolved.question)
+              .then((answer) => {
+                term.pause();
+                typeText(term, answer, 69, () => {
+                  term.resume();
+                });
+              })
               .catch((error) => {
                 console.log(error);
               });
-            }
+          }
+        }
+
+        const commands = {
+          ask: function (...args) {
+            runResolved(this, core.resolveCommand('ask', args));
           },
-          github: function () {
-			      this.echo("\n[[!;;;;https://github.com/andrewcar]GitHub]\n");
-          },
-          hello: function () {
-			      this.pause();
-			      typeText(this, "\nHello back.\n", 69, () => {
-				      this.resume();
-			      });
+          clear: function () {
+            runResolved(this, core.resolveCommand('clear'));
           },
           help: function () {
-			      this.pause();
-			      typeText(this, "\nThe available known commands are boredgames, clear, cv, dob, email, exit, fox, github, help, linkedin, lola, medium, name, phone, ruleofthree and vibecade.\n", 69, () => {
-				      this.resume();
-			      });
-          },
-          hey: function () {
-			      this.pause();
-			      typeText(this, "\nHey there.\n", 69, () => {
-				      this.resume();
-			      });
-          },
-          instagram: function () {
-			      this.echo("\n[[!;;;;https://www.instagram.com/andrewsphone]Instagram]\n");
-          },
-          linkedin: function () {
-			      this.echo("\n[[!;;;;https://www.linkedin.com/in/andrew-carvajal]Linkedin]\n");
+            runResolved(this, core.resolveCommand('help'));
           },
           lola: function () {
             this.echo($('\n<img src="https://i.imgur.com/WzLhVEd.jpg">\n'));
           },
-          marco: function () {
-			      this.pause();
-			      typeText(this, "\nPolo!\n", 69, () => {
-				      this.resume();
-			      });
-          },
-          medium: function () {
-			      this.echo("\n[[!;;;;https://medium.com/@andrewcarvajal]Medium]\n");
-          },
-          name: function () {
-            this.pause();
-            typeText(this, "\nAndrew Carvajal\n", 69, () => {
-				      this.resume();
-			      });
-          },
-          clear: function () {
-            this.clear();
-          },
           ping: function () {
             this.pause();
             $('body').append('<canvas id="pongCanvas" width="800" height="400" style="border:1px solid #00c800; display:block; margin: 20px auto;"></canvas>');
-          },
-          phone: function() {
-			      this.pause();
-			      typeText(this, "\n(954) 292-5454\n", 69, () => {
-				      this.resume();
-			      });
-          },
-          ruleofthree: function () {
-			      this.echo("\n[[!;;;;https://apps.apple.com/us/app/rule-of-three-no-ads/id6443475294]Rule of Three]\n");
           },
           smellyalater: function () {
 			      this.pause();
@@ -191,36 +131,6 @@
       				  term.error('Error fetching title: ' + error.message);
       				  term.resume(); // Resume terminal in case of error
     		      });
-          },
-		      cd: function () {
-			      this.pause();
-			      typeText(this, "\nYour old magic won't work here.\n", 69, () => {
-				      this.resume();
-			      });
-          },
-		      ls: function () {
-			      this.pause();
-			      typeText(this, "\nYour old magic won't work here.\n", 69, () => {
-				      this.resume();
-			      });
-          },
-		      mkdir: function () {
-			      this.pause();
-			      typeText(this, "\nYour old magic won't work here.\n", 69, () => {
-				      this.resume();
-			      });
-          },
-		      pwd: function () {
-			      this.pause();
-			      typeText(this, "\nYour old magic won't work here.\n", 69, () => {
-				      this.resume();
-			      });
-          },
-          vim: function () {
-			      this.pause();
-			      typeText(this, "\nYour old magic won't work here.\n", 69, () => {
-				      this.resume();
-			      });
           },
           exit: function () {
             this.pause();
@@ -465,33 +375,48 @@
               }
             });
           },
-        },
-        {
+        };
+
+        for (const name of Object.keys(core.TYPED_RESPONSES)) {
+          commands[name] = function (...args) {
+            runResolved(this, core.resolveCommand(name, args));
+          };
+        }
+        for (const name of Object.keys(core.LINK_RESPONSES)) {
+          commands[name] = function (...args) {
+            runResolved(this, core.resolveCommand(name, args));
+          };
+        }
+
+        const result = await $("body").terminal(commands, {
           greetings:
-            "\n\n\n                       ▀██                               ▄▄█▀▀██    ▄█▀▀▀▄█\n   ▄▄▄▄   ▄▄ ▄▄▄     ▄▄ ██  ▄▄▄ ▄▄    ▄▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄█▀    ██   ██▄▄  ▀\n  ▀▀ ▄██   ██  ██  ▄▀  ▀██   ██▀ ▀▀ ▄█▄▄▄██  ██  ██  █  ██      ██   ▀▀███▄\n  ▄█▀ ██   ██  ██  █▄   ██   ██     ██        ███ ███   ▀█▄     ██ ▄     ▀██\n  ▀█▄▄▀█▀ ▄██▄ ██▄ ▀█▄▄▀██▄ ▄██▄     ▀█▄▄▄▀    █   █     ▀▀█▄▄▄█▀  █▀▄▄▄▄█▀\n\n///////////////////\n//// Build 302 ////\n///////////////////\n\nThe available known commands are boredgames, clear, cv, dob, email, exit, fox, github, help, linkedin, lola, medium, name, phone, ruleofthree and vibecade.\n\n",
+            "\n\n\n                       ▀██                               ▄▄█▀▀██    ▄█▀▀▀▄█\n   ▄▄▄▄   ▄▄ ▄▄▄     ▄▄ ██  ▄▄▄ ▄▄    ▄▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄█▀    ██   ██▄▄  ▀\n  ▀▀ ▄██   ██  ██  ▄▀  ▀██   ██▀ ▀▀ ▄█▄▄▄██  ██  ██  █  ██      ██   ▀▀███▄\n  ▄█▀ ██   ██  ██  █▄   ██   ██     ██        ███ ███   ▀█▄     ██ ▄     ▀██\n  ▀█▄▄▀█▀ ▄██▄ ██▄ ▀█▄▄▀██▄ ▄██▄     ▀█▄▄▄▀    █   █     ▀▀█▄▄▄█▀  █▀▄▄▄▄█▀\n\n///////////////////\n//// Build 302 ////\n///////////////////\n" +
+            core.HELP_MESSAGE +
+            "\n",
           prompt: '',
           checkArity: false,
-        }
-      );
+        });
       return result;
       }
 
-      $(document).ready(function () {
-        startTerminal();
+      $(document).ready(async function () {
+        await startTerminal();
 
         // ADD GAME VIEW TOGGLE HANDLERS
         $('#gameToggle').on('click', function() {
           $('#gameView').addClass('active');
           $(this).hide();
           // OPTIONALLY PAUSE THE TERMINAL WHEN SWITCHING TO GAME VIEW
-          term.then(terminal => terminal.pause());
+          const termApi = $('.terminal').terminal();
+          if (termApi) termApi.pause();
         });
 
         $('.terminal-console').on('click', function() {
           $('#gameView').removeClass('active');
           $('#gameToggle').show();
           // RESUME TERMINAL WHEN SWITCHING BACK
-          term.then(terminal => terminal.resume());
+          const termApi = $('.terminal').terminal();
+          if (termApi) termApi.resume();
         });
 
         // SET UP OBSERVER TO WATCH FOR CHANGES
@@ -509,10 +434,13 @@
         });
 
         // CONFIGURE OBSERVER TO WATCH ALL CHILDREN OF TERMINAL
-        observer.observe($('.terminal')[0], {
-          childList: true,
-          subtree: true
-        });
+        const terminalEl = $('.terminal')[0];
+        if (terminalEl) {
+          observer.observe(terminalEl, {
+            childList: true,
+            subtree: true
+          });
+        }
       });
     </script>
   </body>

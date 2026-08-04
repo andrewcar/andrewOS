@@ -1,0 +1,10 @@
+node_modules/
+.DS_Store
+.env
+tests/ui/artifacts/
+playwright-report/
+test-results/
+playwright/.cache/
+*.log
+
+.cursor/debug-*.log

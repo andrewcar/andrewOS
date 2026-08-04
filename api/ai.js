@@ -1,19 +1,15 @@
-import { Configuration, OpenAIApi } from "openai";
+import { Configuration, OpenAIApi } from 'openai';
+import { handleAiRequest } from './completion.js';
 
 const configuration = new Configuration({
-    apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY,
 });
 const openai = new OpenAIApi(configuration);
 
+export { buildCompletionRequest, extractCompletionText, handleAiRequest } from './completion.js';
+
 export default async function (req, res) {
-    const completion = await openai.createCompletion({
-        model: "text-davinci-002",
-        prompt: req.body.question,
-        temperature: 0.7,
-        max_tokens: 256,
-        top_p: 1,
-        frequency_penalty: 0,
-        presence_penalty: 0,
-    });
-    res.status(200).json({ result: completion.data.choices[0].text });
+  return handleAiRequest(req, res, {
+    createCompletion: (params) => openai.createCompletion(params),
+  });
 }

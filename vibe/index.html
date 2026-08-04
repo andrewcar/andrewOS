@@ -6,11 +6,16 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <title>Vibecade - Retro Arcade Experience</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap&text=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789" rel="stylesheet">
-  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+  <link rel="preload" href="/vibe/fonts/press-start-2p.woff2" as="font" type="font/woff2" crossorigin>
   <style>
+    @font-face {
+      font-family: 'Press Start 2P';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url('/vibe/fonts/press-start-2p.woff2') format('woff2');
+    }
+
     :root {
       touch-action: none;
       overflow: hidden;
@@ -91,6 +96,103 @@
       font-size: 0.8rem;
       text-align: center;
       opacity: 0.7;
+      display: none;
+      pointer-events: none;
+    }
+
+    #click-to-start {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 1.25rem;
+      background: rgba(0, 0, 0, 0.55);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #click-to-start.visible {
+      display: flex;
+    }
+
+    #click-to-start .cts-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(1.1rem, 4vw, 2.4rem);
+      color: #ff2bd6;
+      text-shadow:
+        0 0 8px rgba(255, 43, 214, 0.9),
+        0 0 24px rgba(0, 255, 255, 0.55),
+        3px 3px 0 #120018;
+      letter-spacing: 0.06em;
+      animation: cts-pulse 1.4s ease-in-out infinite;
+      text-align: center;
+      padding: 0 1rem;
+    }
+
+    #click-to-start .cts-sub {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(0.45rem, 1.4vw, 0.7rem);
+      color: #9efcff;
+      opacity: 0.85;
+      text-align: center;
+      padding: 0 1rem;
+    }
+
+    @keyframes cts-pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.04); opacity: 0.82; }
+    }
+
+    #play-capture {
+      position: fixed;
+      inset: 0;
+      z-index: 35;
+      display: none;
+      cursor: none;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    #play-capture.active {
+      display: block;
+    }
+
+
+    html.playing,
+    html.playing * {
+      /* Transparent 1x1 + none: some Chromium embeds ignore bare `none` without pointer lock */
+      cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'%3E%3C/svg%3E") 0 0, none !important;
+    }
+
+    html.playing a[href*="jam.pieter.com"] {
+      display: none !important;
+    }
+
+    #lock-warning {
+      position: fixed;
+      left: 50%;
+      bottom: 72px;
+      transform: translateX(-50%);
+      z-index: 55;
+      display: none;
+      max-width: min(560px, 92vw);
+      padding: 12px 16px;
+      text-align: center;
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(0.4rem, 1.2vw, 0.55rem);
+      line-height: 1.6;
+      color: #ffeb3b;
+      background: rgba(0, 0, 0, 0.82);
+      border: 2px solid #ff2bd6;
+      text-shadow: 0 0 6px rgba(255, 43, 214, 0.45);
+      pointer-events: none;
+    }
+
+    #lock-warning.visible {
+      display: block;
     }
 
     .joystick-container {
@@ -220,11 +322,21 @@
       }
     }
   </style>
-  <script type="module" crossorigin src="/vibe/assets/index.1f726a5c.js"></script>
+  <script type="module" crossorigin src="/vibe/assets/index.6c8d6b3f.js"></script>
 </head>
 <body>
   <div class="game-container">
     <canvas class="webgl" tabindex="0"></canvas>
+  </div>
+
+  <div id="play-capture" aria-hidden="true"></div>
+  <div id="click-to-start" role="button" tabindex="0" aria-label="Click to start" aria-hidden="true">
+    <div class="cts-title">CLICK TO START</div>
+    <div class="cts-sub">WASD move · mouse look · ESC to release</div>
+  </div>
+
+  <div id="lock-warning" aria-live="polite">
+    MOUSE LOCK BLOCKED HERE — open this URL in Chrome/Safari (close DevTools), then click again
   </div>
 
   <div class="log-box" style="display: none;">
