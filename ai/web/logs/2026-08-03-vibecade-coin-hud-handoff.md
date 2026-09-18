@@ -1,6 +1,6 @@
 # Session handoff: Vibecade coin HUD + polish (2026-08-03)
 
-> **Start here for the next chat.** Continues/supersedes `ai/web/logs/2026-08-03-vibecade-portal-font-debug-handoff.md` (and transitively play-ux). User confirmed coin heights **fixed** after canvas raster approach. Not committed — dirty `main` on andrewos; vibecade source is a separate repo at `~/Developer/Front End/vibecade` (v1.0.40).
+> **Superseded for pickup.** Start here: `ai/web/logs/2026-09-18-thank-you-typewriter-handoff.md`. This note remains the vibecade coin-HUD record. Continues/supersedes `ai/web/logs/2026-08-03-vibecade-portal-font-debug-handoff.md` (and transitively play-ux). User confirmed coin heights **fixed** after canvas raster approach. Not committed — dirty `main` on andrewos; vibecade source is a separate repo at `~/Developer/Front End/vibecade` (v1.0.40).
 
 ---
 

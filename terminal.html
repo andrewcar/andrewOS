@@ -139,6 +139,8 @@
               const response = await fetch('/');
               const html = await response.text();
               document.documentElement.innerHTML = html;
+              const typeSrc = await fetch('/js/type-text.js').then((r) => r.text());
+              (0, eval)(typeSrc);
               
               // Define placeholders here since it needs to be in scope
               const placeholders = [
@@ -146,47 +148,6 @@
                 ["a talking button", "writes code while you nap"],
                 [""]
               ];
-
-              // Function to animate text typing (matching the index.html version exactly)
-              function typeText(element, text, onComplete) {
-                element.innerHTML = ''; // Clear existing content
-                const lines = text.split('<br>');
-                let currentLine = 0;
-                let currentChar = 0;
-                
-                // Create container for each line
-                lines.forEach(() => {
-                  const div = document.createElement('div');
-                  element.appendChild(div);
-                });
-                
-                function addCharacter() {
-                  if (currentLine < lines.length) {
-                    const line = lines[currentLine];
-                    if (currentChar < line.length) {
-                      const span = document.createElement('span');
-                      span.textContent = line[currentChar];
-                      if (line[currentChar] === ' ') {
-                        span.innerHTML = '&nbsp;';
-                      }
-                      element.children[currentLine].appendChild(span);
-                      setTimeout(() => span.classList.add('show'), 50);
-                      currentChar++;
-                      setTimeout(addCharacter, 69);
-                    } else {
-                      currentLine++;
-                      currentChar = 0;
-                      if (currentLine < lines.length) {
-                        setTimeout(addCharacter, 69);
-                      } else {
-                        onComplete && setTimeout(onComplete, 200);
-                      }
-                    }
-                  }
-                }
-                
-                addCharacter();
-              }
 
               // Wait for DOM to be ready
               if (document.readyState === 'loading') {
@@ -199,7 +160,7 @@
               
               // Initial animation sequence
               const header = document.querySelector('.header');
-              typeText(header, "Let's build<br>something.", () => {
+              typeHeaderText(header, "Let's build<br>something.", () => {
                 setTimeout(() => {
                   document.querySelector('.madlib').classList.add('fade-in');
                   setTimeout(() => {
@@ -222,7 +183,7 @@
                 setTimeout(() => {
                   madlib.style.display = 'none';
                   initialButton.style.display = 'none';
-                  typeText(header, "Want me to<br>follow up?", () => {
+                  typeHeaderText(header, "Want me to<br>follow up?", () => {
                     contact.style.display = 'block';
                     contact.offsetHeight;
                     contact.classList.add('fade-in');
@@ -320,7 +281,7 @@
                       contact.style.display = 'none';
                       sendButton.style.display = 'none';
                       subtitle.style.display = 'none';
-                      typeText(header, "Thanks!<br>I'll be in touch.", null);
+                      typeHeaderText(header, "Thanks!<br>I'll be in touch.", null);
                     }, 500);
                   } else {
                     throw new Error('Failed to send');
