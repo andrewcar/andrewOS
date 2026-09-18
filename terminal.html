@@ -141,13 +141,8 @@
               document.documentElement.innerHTML = html;
               const typeSrc = await fetch('/js/type-text.js').then((r) => r.text());
               (0, eval)(typeSrc);
-              
-              // Define placeholders here since it needs to be in scope
-              const placeholders = [
-                ["a weird website", "helps people flirt with AI"],
-                ["a talking button", "writes code while you nap"],
-                [""]
-              ];
+              const madlibSrc = await fetch('/js/madlib-placeholders.js').then((r) => r.text());
+              (0, eval)(madlibSrc);
 
               // Wait for DOM to be ready
               if (document.readyState === 'loading') {
@@ -155,7 +150,7 @@
               }
 
               // Now execute the initialization as a window.onload function
-              const randomIndex = Math.floor(Math.random() * (placeholders.length - 1));
+              const pair = pickMadlibPlaceholder();
               const inputs = document.querySelectorAll('.madlib input');
               
               // Initial animation sequence
@@ -213,7 +208,7 @@
 
               // Handle both placeholder and input text resizing
               inputs.forEach((input, i) => {
-                input.placeholder = placeholders[randomIndex][i];
+                input.placeholder = pair[i];
                 const initialSize = calculateFontSize(input.placeholder);
                 input.style.fontSize = initialSize + 'rem';
                 

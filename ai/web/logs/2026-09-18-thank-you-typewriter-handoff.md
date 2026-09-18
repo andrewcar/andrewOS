@@ -1,6 +1,6 @@
 # Session handoff: Homepage thank-you typewriter leftover (2026-09-18)
 
-> **Start here for the next chat.** Continues/supersedes `ai/web/logs/2026-08-03-vibecade-coin-hud-handoff.md` for pickup. Hub ticket [B1 Revamp Homepage](https://relay.andrewos.com/admin/feedback/2DC0F01C-7DA5-4B3E-8ECC-BF6EA9C95558). Fix is local on `main`; live andrewos.com is still the old typewriter until this commit deploys.
+> **Superseded for pickup.** Start at `ai/web/logs/2026-09-18-madlib-placeholders-handoff.md`. Hub ticket [B1 Revamp Homepage](https://relay.andrewos.com/admin/feedback/2DC0F01C-7DA5-4B3E-8ECC-BF6EA9C95558) thank-you leftover is on `main` (`67ca745`).
 
 ---
 
@@ -12,7 +12,7 @@
 | Homepage redesign / Gerry Wheat site | **Not in scope** — Gate 1 was the typewriter glitch only |
 | Debug instrumentation | **None added** |
 | Tests | **Passed** this session after last edit (`home.spec.js` nbsp assertion). Vitest `type-text.test.js` (3). Playwright `tests/ui/home.spec.js` desktop-chromium + mobile-chromium (6). Local browser submit + overlap on `http://127.0.0.1:4173` settled `Thanks! I'll be in touch.` Shots: `ai/logs/2/screenshots/thank-you-submit-*.png`, `thank-you-overlap-*.png`. |
-| Git commit / PR | **In progress at handoff write** — push this session. Do **not** include dirty `vibe/` bundle, `tests/ui/vibe.spec.js`, or tracked `node_modules` (leftover from vibecade work). |
+| Git commit / PR | **Done** — `67ca745` on `main`. Dirty `vibe/` / `node_modules` still uncommitted. |
 
 ---
 

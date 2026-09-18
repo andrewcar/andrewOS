@@ -144,4 +144,76 @@ test.describe('landing page', () => {
     const shotPath = join(SCREENSHOT_DIR, `thank-you-submit-${testInfo.project.name}.png`);
     await page.screenshot({ path: shotPath, fullPage: true });
   });
+
+  async function madlibPlaceholders(page, { waitForFade } = { waitForFade: true }) {
+    await page.waitForFunction(() => Boolean(document.getElementById('what')?.placeholder), null, {
+      timeout: 10_000,
+    });
+    if (waitForFade) {
+      await expect(page.locator('.madlib')).toHaveClass(/fade-in/, { timeout: 15_000 });
+    }
+    return page.evaluate(() => ({
+      what: document.getElementById('what').placeholder,
+      does: document.getElementById('does').placeholder,
+      pool: window.MADLIB_PLACEHOLDERS,
+    }));
+  }
+
+  test('madlib placeholder pool is complete and applied', async ({ page }, testInfo) => {
+    await page.goto('/');
+    const { what, does, pool } = await madlibPlaceholders(page);
+    expect(pool.length).toBeGreaterThanOrEqual(8);
+    for (const pair of pool) {
+      expect(pair).toHaveLength(2);
+      expect(String(pair[0]).trim()).not.toBe('');
+      expect(String(pair[1]).trim()).not.toBe('');
+    }
+    expect(pool).toContainEqual([what, does]);
+
+    mkdirSync(SCREENSHOT_DIR, { recursive: true });
+    await page.screenshot({
+      path: join(SCREENSHOT_DIR, `madlib-pool-${testInfo.project.name}.png`),
+      fullPage: true,
+    });
+  });
+
+  test('madlib picker can show the last pair', async ({ page }, testInfo) => {
+    await page.addInitScript(() => {
+      Math.random = () => 0.999999;
+    });
+    await page.goto('/');
+    const { what, does, pool } = await madlibPlaceholders(page);
+    expect([what, does]).toEqual(pool[pool.length - 1]);
+
+    mkdirSync(SCREENSHOT_DIR, { recursive: true });
+    await page.screenshot({
+      path: join(SCREENSHOT_DIR, `madlib-last-${testInfo.project.name}.png`),
+      fullPage: true,
+    });
+  });
+
+  test('madlib reloads never show empty placeholders', async ({ page }, testInfo) => {
+    test.setTimeout(90_000);
+    await page.addInitScript(() => {
+      Math.random = () => {
+        const n = window.MADLIB_PLACEHOLDERS?.length || 1;
+        const raw = Number(sessionStorage.getItem('madlib-i') || '0');
+        sessionStorage.setItem('madlib-i', String(raw + 1));
+        return (raw % n) / n;
+      };
+    });
+
+    const reloads = testInfo.project.name === 'desktop-chromium' ? 12 : 1;
+    const seen = new Set();
+    for (let r = 0; r < reloads; r += 1) {
+      await page.goto('/');
+      const { what, does } = await madlibPlaceholders(page, { waitForFade: false });
+      expect(what.trim()).not.toBe('');
+      expect(does.trim()).not.toBe('');
+      seen.add(`${what}|||${does}`);
+    }
+    if (reloads >= 8) {
+      expect(seen.size).toBeGreaterThanOrEqual(8);
+    }
+  });
 });
