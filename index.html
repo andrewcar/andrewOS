@@ -249,6 +249,7 @@
         .feedback-open-button {
           font-size: 1.15rem;
           margin-top: 1rem;
+          margin-bottom: 5rem;
         }
         
         .final-subtitle {
@@ -401,10 +402,8 @@
             document.querySelector('.madlib').classList.add('fade-in');
             setTimeout(() => {
               document.querySelector('.initial-button').classList.add('fade-in');
-              setTimeout(() => {
-                const feedbackOpen = document.querySelector('.feedback-open-button');
-                if (feedbackOpen) feedbackOpen.classList.add('fade-in');
-              }, 200);
+              const feedbackOpen = document.querySelector('.feedback-open-button');
+              if (feedbackOpen) feedbackOpen.classList.add('fade-in');
             }, 200);
           }, 200);
         });

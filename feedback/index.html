@@ -88,13 +88,18 @@
         box-sizing: border-box;
       }
       .feedback-form textarea {
-        min-height: 7rem;
+        min-height: 6.5rem;
         resize: vertical;
         line-height: 1.4;
+        text-align: left;
+        padding: 0.85rem 1rem;
+        border: 2px solid #000;
+        border-radius: 12px;
       }
       .feedback-form textarea:focus,
       .feedback-form input[type="text"]:focus {
         outline: none;
+        border-color: #c80000;
         border-bottom-color: #c80000;
       }
       .feedback-form textarea::placeholder,
@@ -168,10 +173,11 @@
       @media screen and (max-width: 428px) {
         body {
           padding: 1rem;
-          justify-content: space-between;
+          justify-content: flex-start;
           min-height: 100vh;
           max-width: 100vw;
           overflow-x: hidden;
+          padding-bottom: 5rem;
         }
         .ascii-art {
           font-size: 0.4rem;
@@ -197,14 +203,7 @@
           width: calc(100vw - 4rem);
         }
         .x-button {
-          bottom: 1rem;
-          right: 1rem;
-          width: 40px;
-          height: 40px;
-        }
-        .x-button svg {
-          width: 20px;
-          height: 20px;
+          display: none;
         }
       }
     </style>
@@ -239,7 +238,7 @@
    ▄█▀ ██   ██  ██  █▄   ██   ██     ██        ███ ███   ▀█▄     ██ ▄     ▀██
   ▀█▄▄▀█▀ ▄██▄ ██▄ ▀█▄▄▀██▄ ▄██▄     ▀█▄▄▄▀    █   █     ▀▀█▄▄▄█▀  █▀▄▄▄▄█▀</pre>
     <h1 class="header">Be as savage<br>as you want.</h1>
-    <form class="feedback-form" id="voxbot-feedback-form" action="https://formspree.io/f/mwpljayb" method="POST" onsubmit="return false;">
+    <form class="feedback-form fade-in" id="voxbot-feedback-form" action="https://formspree.io/f/mwpljayb" method="POST" onsubmit="return false;">
       <p class="feedback-prompt">Andrew made VoxBot. Tell him the truth.</p>
       <textarea id="feedback-message" name="feedback" required placeholder="the voice, the jokes, the whole thing — go."></textarea>
       <input type="text" id="feedback-name" name="name" placeholder="name or handle (optional)" autocomplete="nickname">
@@ -248,8 +247,8 @@
       <input type="hidden" name="type" value="voxbot-feedback">
       <input type="hidden" name="form" value="voxbot-feedback">
     </form>
-    <button type="button" class="feedback-send" id="feedback-send">Leave Andrew feedback</button>
-    <div class="feedback-nod" id="feedback-nod">he can take it.</div>
+    <button type="button" class="feedback-send fade-in" id="feedback-send">Leave Andrew feedback</button>
+    <div class="feedback-nod fade-in" id="feedback-nod">he can take it.</div>
     <script src="/js/type-text.js"></script>
     <script src="/js/voxbot-feedback.js"></script>
     <script>
@@ -259,15 +258,11 @@
         const sendButton = document.getElementById('feedback-send');
         const nodEl = document.getElementById('feedback-nod');
 
-        typeHeaderText(header, "Be as savage<br>as you want.", () => {
-          formRoot.classList.add('fade-in');
-          setTimeout(() => {
-            sendButton.classList.add('fade-in');
-            setTimeout(() => {
-              nodEl.classList.add('fade-in');
-            }, 400);
-          }, 250);
-        });
+        // Form is the point of the deep link — show it immediately, type the header around it.
+        formRoot.classList.add('fade-in');
+        sendButton.classList.add('fade-in');
+        nodEl.classList.add('fade-in');
+        typeHeaderText(header, "Be as savage<br>as you want.");
 
         bindVoxbotFeedbackForm({
           header,

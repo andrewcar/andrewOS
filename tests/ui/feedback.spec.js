@@ -12,6 +12,20 @@ async function settledHeader(page) {
 }
 
 test.describe('voxbot creator feedback', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route('https://storage.ko-fi.com/**', async (route) => {
+      if (route.request().url().includes('overlay-widget.js')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/javascript',
+          body: 'window.kofiWidgetOverlay = { draw() {} };',
+        });
+        return;
+      }
+      await route.abort();
+    });
+  });
+
   test('/feedback shows a separate feedback form, not the madlib', async ({ page }, testInfo) => {
     const response = await page.goto('/feedback');
     expect(response?.ok()).toBeTruthy();
@@ -22,7 +36,8 @@ test.describe('voxbot creator feedback', () => {
     await expect(page.locator('.madlib')).toHaveCount(0);
     await expect(page.locator('.initial-button')).toHaveCount(0);
 
-    await expect(page.locator('#voxbot-feedback-form')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('#voxbot-feedback-form')).toHaveClass(/fade-in/, { timeout: 15_000 });
+    await expect(page.locator('#feedback-send')).toHaveClass(/fade-in/);
     await expect(page.locator('#feedback-message')).toBeVisible();
     await expect(page.locator('#feedback-name')).toBeVisible();
     await expect(page.locator('#feedback-contact')).toBeVisible();
@@ -31,7 +46,7 @@ test.describe('voxbot creator feedback', () => {
 
     await expect
       .poll(async () => settledHeader(page), { timeout: 15_000 })
-      .toMatch(/savage/i);
+      .toBe('Be as savage as you want.');
 
     mkdirSync(SCREENSHOT_DIR, { recursive: true });
     await page.screenshot({
@@ -55,8 +70,12 @@ test.describe('voxbot creator feedback', () => {
     await expect(open).toHaveAttribute('href', /\/feedback/);
     await open.click();
     await expect(page).toHaveURL(/\/feedback/);
-    await expect(page.locator('#feedback-message')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('#voxbot-feedback-form')).toHaveClass(/fade-in/, { timeout: 15_000 });
+    await expect(page.locator('#feedback-message')).toBeVisible();
     await expect(page.locator('#what')).toHaveCount(0);
+    await expect
+      .poll(async () => settledHeader(page), { timeout: 15_000 })
+      .toBe('Be as savage as you want.');
 
     mkdirSync(SCREENSHOT_DIR, { recursive: true });
     await page.screenshot({
