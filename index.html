@@ -4,6 +4,13 @@
     <title>andrewOS</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="icon" type="image/png" href="/favicon.png" />
+    <script src="/js/voxbot-feedback.js"></script>
+    <script>
+      // VoxBot egg: /?feedback=1 (optional source=/from=) opens the separate feedback page.
+      if (typeof isFeedbackDeepLink === 'function' && isFeedbackDeepLink(window.location)) {
+        window.location.replace(feedbackDeepLinkDestination(window.location));
+      }
+    </script>
     <style>
       body {
         margin: 0;
@@ -146,6 +153,27 @@
       .send-button:hover {
         transform: scale(1.05);
       }
+      .feedback-open-button {
+        display: inline-block;
+        background: transparent;
+        color: #000;
+        border: 2px solid #000;
+        border-radius: 12px;
+        padding: 0.85rem 1.6rem;
+        font-size: 1.15rem;
+        cursor: pointer;
+        margin-top: 1rem;
+        font-family: inherit;
+        text-decoration: none;
+        text-align: center;
+        box-sizing: border-box;
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: opacity 0.5s ease, transform 0.5s ease;
+      }
+      .feedback-open-button:hover {
+        transform: scale(1.05);
+      }
       .send-button {
         display: none;
       }
@@ -210,12 +238,17 @@
         }
         
         .initial-button,
-        .send-button {
+        .send-button,
+        .feedback-open-button {
           font-size: 1.5rem;
           padding: 1.2rem 2.5rem;
           border-radius: 16px;
           margin-top: 2rem;
           width: calc(100vw - 4rem);
+        }
+        .feedback-open-button {
+          font-size: 1.15rem;
+          margin-top: 1rem;
         }
         
         .final-subtitle {
@@ -351,6 +384,7 @@
       <input type="text" id="contact" placeholder="rickrubin@aol.com">
     </div>
     <button class="initial-button">Send to Andrew</button>
+    <a class="feedback-open-button" href="/feedback?source=homepage">Be as savage as you want</a>
     <button class="send-button">Send to Andrew</button>
     <div class="final-subtitle">(for real this time)</div>
     <script src="/js/type-text.js"></script>
@@ -367,6 +401,10 @@
             document.querySelector('.madlib').classList.add('fade-in');
             setTimeout(() => {
               document.querySelector('.initial-button').classList.add('fade-in');
+              setTimeout(() => {
+                const feedbackOpen = document.querySelector('.feedback-open-button');
+                if (feedbackOpen) feedbackOpen.classList.add('fade-in');
+              }, 200);
             }, 200);
           }, 200);
         });
@@ -378,14 +416,17 @@
           const header = document.querySelector('.header');
           const initialButton = document.querySelector('.initial-button');
           const sendButton = document.querySelector('.send-button');
+          const feedbackOpen = document.querySelector('.feedback-open-button');
           
           // Start transitions
           madlib.classList.add('fade-out');
           initialButton.classList.add('fade-out');
+          if (feedbackOpen) feedbackOpen.classList.add('fade-out');
           
           setTimeout(() => {
             madlib.style.display = 'none';
             initialButton.style.display = 'none';
+            if (feedbackOpen) feedbackOpen.style.display = 'none';
             typeHeaderText(header, "Want me to<br>follow up?", () => {
               contact.style.display = 'block';
               contact.offsetHeight;
