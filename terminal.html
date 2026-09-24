@@ -121,6 +121,10 @@
           if (!reduced) document.body.classList.add('term-boot');
           term.pause();
           term.set_prompt('');
+          const banner = document.createElement('div');
+          banner.className = 'andrewos-banner';
+          banner.textContent = core.ASCII_BANNER;
+          term.echo(banner);
           const lines = core.bootLinesForWidth(window.innerWidth);
           for (const line of lines) {
             term.echo(line);

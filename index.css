@@ -2,7 +2,7 @@ html, body {
   height: 100%;
   margin: 0;
   padding: 0;
-  background: #12110e;
+  background: #000;
   overflow-x: hidden;
 }
 
@@ -53,16 +53,50 @@ html, body {
   .terminal .cmd {
     padding-bottom: env(safe-area-inset-bottom);
   }
+
+  /* ASCII art logo - dynamic responsive sizing */
+  .terminal .terminal-output div.andrewos-banner,
+  .terminal-output div:first-child {
+    font-family: 'Courier New', 'Monaco', 'Menlo', monospace !important;
+    font-size: min(14px, calc(100vw / 52)) !important;
+    line-height: 1.0 !important;
+    letter-spacing: 0 !important;
+    word-spacing: 0 !important;
+    white-space: pre !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+    overflow-x: auto;
+    text-rendering: optimizeSpeed;
+    -webkit-font-feature-settings: "kern" 0;
+    font-feature-settings: "kern" 0;
+    position: sticky !important;
+    top: 0 !important;
+    background-color: #000 !important;
+    z-index: 10 !important;
+    margin: 0 !important;
+    padding: 10px 0 !important;
+    border-bottom: none !important;
+    max-width: 100%;
+  }
 }
 
 .terminal {
-  --color: #f3ecdf;
-  --background: #12110e;
-  --link-color: #f3ecdf;
-  --glow: 0;
-  --size: 1;
+  --color: rgba(0, 200, 0, 0.99);
+  --background: #000;
+  --link-color: rgba(0, 200, 0, 0.99);
+  --glow: 1;
   max-width: 100%;
   overflow-x: hidden;
+}
+
+.terminal .terminal-output div.andrewos-banner {
+  font-family: 'Courier New', 'Monaco', 'Menlo', monospace !important;
+  line-height: 1.05 !important;
+  letter-spacing: 0 !important;
+  white-space: pre !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  max-width: 100%;
 }
 
 .terminal .terminal-scroller,
@@ -73,7 +107,7 @@ html, body {
   box-sizing: border-box;
 }
 
-.terminal .terminal-output div,
+.terminal .terminal-output div:not(.andrewos-banner),
 .terminal .cmd .prompt {
   white-space: pre-wrap !important;
   overflow-wrap: anywhere;

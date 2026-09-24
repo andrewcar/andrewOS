@@ -7,6 +7,7 @@ import {
   LINK_RESPONSES,
   TYPED_RESPONSES,
   UNIX_DENIED,
+  ASCII_BANNER,
   bootLinesForWidth,
   chunkAnswer,
   formatCommandList,
@@ -77,7 +78,9 @@ describe('resolveCommand', () => {
     expect(resolveCommand('dob').text).toContain('April 26, 1990');
     expect(shellPrompt('/')).toBe('guest@andrewos:~$ ');
     expect(shellPrompt('/projects')).toBe('guest@andrewos:~/projects$ ');
-    expect(bootLinesForWidth(390)).toEqual(['andrewOS', 'Build 302']);
+    expect(ASCII_BANNER).toContain('▄▄█▀▀██');
+    expect(ASCII_BANNER).toContain('//// Build 302 ////');
+    expect(bootLinesForWidth(390)).toEqual([]);
     expect(bootLinesForWidth(1200)[0]).toBe('andrewOS');
     expect(bootLinesForWidth(1200).length).toBeGreaterThan(2);
   });
