@@ -40,6 +40,20 @@ test.describe('terminal', () => {
     await expect(page.locator('.terminal .cmd-prompt').first()).toContainText('guest@andrewos:~$');
     await expect(page.locator('.terminal-output')).toContainText('Build 302', { timeout: 15_000 });
     await expect(page.locator('.terminal-output')).toContainText('try help, ls, or ask');
+    const promptBox = await page.locator('.terminal .cmd-prompt').first().boundingBox();
+    expect(promptBox).toBeTruthy();
+    expect(promptBox.y + promptBox.height).toBeLessThan((page.viewportSize()?.height || 800) + 1);
+    if (testInfo.project.name.includes('mobile')) {
+      await expect(page.locator('.terminal-output')).not.toContainText('guest session');
+    }
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const el = document.activeElement;
+          return Boolean(el && el.closest('.terminal, .cmd'));
+        })
+      )
+      .toBeTruthy();
 
     // Prompt / cmd line present (desktop textarea or mobile contenteditable)
     const cmdLine = page.locator('.terminal .cmd-editable, .terminal .cmd textarea, .terminal textarea').first();
@@ -114,5 +128,63 @@ test.describe('terminal', () => {
       path: join(SCREENSHOT_DIR, `terminal-${testInfo.project.name}.png`),
       fullPage: true,
     });
+  });
+
+  test('exit returns home with the shell door faded in and focused', async ({ page }) => {
+    test.setTimeout(60_000);
+    await page.route('https://storage.ko-fi.com/**', async (route) => {
+      if (route.request().url().includes('overlay-widget.js')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/javascript',
+          body: 'window.kofiWidgetOverlay = { draw() {} };',
+        });
+        return;
+      }
+      await route.abort();
+    });
+
+    await page.goto('/terminal.html');
+    await expect(page.locator('body')).toHaveAttribute('data-term-boot', 'ready', { timeout: 15_000 });
+    await page.evaluate(() => {
+      window.jQuery('.terminal').terminal().exec('exit');
+    });
+    await expect(page).toHaveURL(/\/$/);
+    const shell = page.locator('a.shell-entry');
+    await expect(shell).toHaveClass(/fade-in/, { timeout: 20_000 });
+    await expect(shell).toContainText('guest@andrewos:~$');
+    await expect(shell).toBeFocused();
+    await expect(page.locator('.feedback-open-button')).toHaveClass(/fade-in/);
+
+    await shell.click();
+    await expect(page).toHaveURL(/\/terminal$/);
+    await expect(page.locator('.terminal .cmd-prompt').first()).toContainText('guest@andrewos:~$', {
+      timeout: 20_000,
+    });
+  });
+
+  test('cold /terminal matches the terminal.html boot', async ({ page }) => {
+    await page.goto('/terminal');
+    await expect(page.locator('body')).toHaveAttribute('data-term-boot', 'ready', { timeout: 15_000 });
+    await expect(page.locator('.terminal .cmd-prompt').first()).toContainText('guest@andrewos:~$');
+    await expect(page.locator('.terminal-output')).toContainText('try help, ls, or ask');
+
+    await page.goto('/terminal.html');
+    await expect(page.locator('body')).toHaveAttribute('data-term-boot', 'ready', { timeout: 15_000 });
+    await expect(page.locator('.terminal .cmd-prompt').first()).toContainText('guest@andrewos:~$');
+  });
+
+  test('reduced motion skips the boot fade and the shell blink', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/terminal.html');
+    await expect(page.locator('body')).toHaveAttribute('data-term-boot', 'ready', { timeout: 15_000 });
+    await expect(page.locator('body')).not.toHaveClass(/term-boot/);
+    await expect(page.locator('.terminal .cmd-prompt').first()).toContainText('guest@andrewos:~$');
+
+    await page.goto('/');
+    const cursor = page.locator('.shell-cursor');
+    await expect(page.locator('a.shell-entry')).toHaveClass(/fade-in/, { timeout: 15_000 });
+    const animation = await cursor.evaluate((el) => getComputedStyle(el).animationName);
+    expect(animation === 'none' || animation === '').toBeTruthy();
   });
 });

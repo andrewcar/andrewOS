@@ -59,6 +59,12 @@ export const IDENTITY_PANEL =
 
 export const BOOT_LINES = ['andrewOS', 'power  ok', 'Build 302', 'guest session'];
 
+/** Phone screens skip the extra POST lines so the prompt stays on the first screen. */
+export function bootLinesForWidth(width) {
+  if (Number(width) > 0 && Number(width) <= 700) return ['andrewOS', 'Build 302'];
+  return BOOT_LINES;
+}
+
 export const BOOT_HINT = 'try help, ls, or ask …';
 
 /** Commands that type out a fixed string via typeText */

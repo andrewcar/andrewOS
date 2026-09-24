@@ -7,6 +7,7 @@ import {
   LINK_RESPONSES,
   TYPED_RESPONSES,
   UNIX_DENIED,
+  bootLinesForWidth,
   chunkAnswer,
   formatCommandList,
   isKnownHelpCommand,
@@ -76,6 +77,9 @@ describe('resolveCommand', () => {
     expect(resolveCommand('dob').text).toContain('April 26, 1990');
     expect(shellPrompt('/')).toBe('guest@andrewos:~$ ');
     expect(shellPrompt('/projects')).toBe('guest@andrewos:~/projects$ ');
+    expect(bootLinesForWidth(390)).toEqual(['andrewOS', 'Build 302']);
+    expect(bootLinesForWidth(1200)[0]).toBe('andrewOS');
+    expect(bootLinesForWidth(1200).length).toBeGreaterThan(2);
   });
 
   it('documents ask and chunks a one-shot reply', () => {

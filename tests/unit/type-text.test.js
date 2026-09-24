@@ -48,6 +48,7 @@ describe('typeHeaderText', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    delete globalThis.matchMedia;
   });
 
   it('types two lines', async () => {
@@ -76,5 +77,14 @@ describe('typeHeaderText', () => {
     await vi.runAllTimersAsync();
     expect(firstDone).not.toHaveBeenCalled();
     expect(secondDone).toHaveBeenCalledTimes(1);
+  });
+
+  it('paints the header immediately when motion is reduced', () => {
+    globalThis.matchMedia = () => ({ matches: true });
+    const header = makeElement('h1');
+    const done = vi.fn();
+    globalThis.typeHeaderText(header, "Thanks!<br>I'll be in touch.", done);
+    expect(headerText(header)).toBe("Thanks!\nI'll be in touch.");
+    expect(done).toHaveBeenCalledTimes(1);
   });
 });
