@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>andrewOS</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
     <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
     <script src="https://unpkg.com/jquery.terminal/js/jquery.terminal.min.js"></script>
     <link
@@ -31,6 +31,12 @@
       }
 
     function typeText(term, text, delay = 100, callback) {
+		const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		if (reduced) {
+			term.echo(text);
+			if (typeof callback === 'function') callback();
+			return;
+		}
 		let i = 0;
 		let old_prompt = term.get_prompt();
 		term.set_prompt('');
@@ -73,17 +79,81 @@
             return;
           }
           if (resolved.kind === 'ask') {
-            ask(resolved.question)
-              .then((answer) => {
-                term.pause();
-                typeText(term, answer, 69, () => {
-                  term.resume();
-                });
-              })
-              .catch((error) => {
-                console.log(error);
-              });
+            streamAsk(term, resolved.question);
+            return;
           }
+          if (resolved.kind === 'navigate' && resolved.href) {
+            term.echo(resolved.text || '');
+            window.location.assign(resolved.href);
+          }
+        }
+
+        function delay(ms) {
+          return new Promise((resolve) => setTimeout(resolve, ms));
+        }
+
+        async function streamAsk(term, question) {
+          const oldPrompt = term.get_prompt();
+          term.pause();
+          term.set_prompt('');
+          term.echo('');
+          const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          try {
+            const answer = await ask(question);
+            const chunks = core.chunkAnswer(answer || '');
+            if (!chunks.length) term.echo('(no answer)');
+            for (const chunk of chunks) {
+              term.echo(chunk, { newline: false });
+              if (!reduced) await delay(32);
+            }
+            if (chunks.length) term.echo('');
+          } catch (error) {
+            console.log(error);
+            term.echo('\ncould not reach the answer.\n');
+          } finally {
+            term.set_prompt(oldPrompt);
+            term.resume();
+          }
+        }
+
+        async function playBoot(term) {
+          const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          if (!reduced) document.body.classList.add('term-boot');
+          term.pause();
+          term.set_prompt('');
+          const lines = core.bootLinesForWidth(window.innerWidth);
+          for (const line of lines) {
+            term.echo(line);
+            if (!reduced) await delay(90);
+          }
+          term.echo(core.BOOT_HINT);
+          term.set_prompt(core.shellPrompt(shell.cwd));
+          document.body.classList.remove('term-boot');
+          document.body.dataset.termBoot = 'ready';
+          term.resume();
+          if (typeof term.focus === 'function') term.focus();
+        }
+
+        async function loadClassic(src) {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error(src));
+            document.head.appendChild(script);
+          });
+        }
+
+        async function returnAndrewHome() {
+          window.history.pushState({}, '', '/');
+          const html = await fetch('/').then((response) => response.text());
+          document.documentElement.innerHTML = html;
+          await loadClassic('/js/type-text.js');
+          await loadClassic('/js/madlib-placeholders.js');
+          await loadClassic('/js/voxbot-feedback.js');
+          await loadClassic('/js/open-terminal.js');
+          await loadClassic('/js/home-boot.js');
+          if (typeof bootAndrewHome === 'function') bootAndrewHome({ returning: true });
         }
 
         const commands = {
@@ -134,190 +204,11 @@
           },
           exit: function () {
             this.pause();
-            typeText(this, "\nGoodbye...\n", 69, async () => {
-              window.history.pushState({}, '', '/');
-              const response = await fetch('/');
-              const html = await response.text();
-              document.documentElement.innerHTML = html;
-              const typeSrc = await fetch('/js/type-text.js').then((r) => r.text());
-              (0, eval)(typeSrc);
-              const madlibSrc = await fetch('/js/madlib-placeholders.js').then((r) => r.text());
-              (0, eval)(madlibSrc);
-              const openSrc = await fetch('/js/open-terminal.js').then((r) => r.text());
-              (0, eval)(openSrc);
-
-              // Wait for DOM to be ready
-              if (document.readyState === 'loading') {
-                await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve));
-              }
-
-              // Now execute the initialization as a window.onload function
-              const pair = pickMadlibPlaceholder();
-              const inputs = document.querySelectorAll('.madlib input');
-              
-              // Initial animation sequence
-              const header = document.querySelector('.header');
-              typeHeaderText(header, "Let's build<br>something.", () => {
-                const shell = document.querySelector('.shell-entry');
-                if (shell) shell.classList.add('fade-in');
-                setTimeout(() => {
-                  document.querySelector('.madlib').classList.add('fade-in');
-                  setTimeout(() => {
-                    document.querySelector('.initial-button').classList.add('fade-in');
-                  }, 200);
-                }, 200);
+            typeText(this, "\nGoodbye...\n", 69, () => {
+              returnAndrewHome().catch((error) => {
+                console.log(error);
+                this.resume();
               });
-
-              // Set up all the event listeners and handlers
-              document.querySelector('.initial-button').addEventListener('click', function() {
-                const madlib = document.querySelector('.madlib');
-                const contact = document.querySelector('.contact-form');
-                const header = document.querySelector('.header');
-                const initialButton = document.querySelector('.initial-button');
-                const sendButton = document.querySelector('.send-button');
-                
-                madlib.classList.add('fade-out');
-                initialButton.classList.add('fade-out');
-                
-                setTimeout(() => {
-                  madlib.style.display = 'none';
-                  initialButton.style.display = 'none';
-                  typeHeaderText(header, "Want me to<br>follow up?", () => {
-                    contact.style.display = 'block';
-                    contact.offsetHeight;
-                    contact.classList.add('fade-in');
-                    setTimeout(() => {
-                      sendButton.style.display = 'block';
-                      sendButton.offsetHeight;
-                      sendButton.classList.add('fade-in');
-                      setTimeout(() => {
-                        const subtitle = document.querySelector('.final-subtitle');
-                        subtitle.style.display = 'block';
-                        subtitle.offsetHeight;
-                        subtitle.classList.add('fade-in');
-                      }, 600);
-                    }, 600);
-                  });
-                }, 500);
-              });
-
-              // Function to calculate the appropriate font size
-              const calculateFontSize = (text) => {
-                const length = text.length;
-                if (length > 18) {
-                  return Math.max(0.35, 2 * Math.pow(0.96, length - 18));
-                }
-                return 2;
-              };
-
-              // Handle both placeholder and input text resizing
-              inputs.forEach((input, i) => {
-                input.placeholder = pair[i];
-                const initialSize = calculateFontSize(input.placeholder);
-                input.style.fontSize = initialSize + 'rem';
-                
-                input.addEventListener('input', function() {
-                  if (this.value) {
-                    const newSize = calculateFontSize(this.value);
-                    this.style.fontSize = newSize + 'rem';
-                  } else {
-                    const placeholderSize = calculateFontSize(this.placeholder);
-                    this.style.fontSize = placeholderSize + 'rem';
-                  }
-                });
-              });
-
-              // Handle contact input resizing
-              const contactInput = document.getElementById('contact');
-              const initialContactSize = calculateFontSize(contactInput.placeholder);
-              contactInput.style.fontSize = initialContactSize + 'rem';
-              
-              contactInput.addEventListener('input', function() {
-                if (this.value) {
-                  const newSize = calculateFontSize(this.value);
-                  this.style.fontSize = newSize + 'rem';
-                } else {
-                  const placeholderSize = calculateFontSize(this.placeholder);
-                  this.style.fontSize = placeholderSize + 'rem';
-                }
-              });
-
-              // Handle final form submission
-              document.querySelector('.send-button').addEventListener('click', async function() {
-                const whatText = document.getElementById('what').value || document.getElementById('what').placeholder;
-                const doesText = document.getElementById('does').value || document.getElementById('does').placeholder;
-                const contactInfo = document.getElementById('contact').value;
-                
-                if (!contactInfo) {
-                  alert('Please enter your contact info!');
-                  return;
-                }
-
-                try {
-                  const response = await fetch('https://formspree.io/f/mwpljayb', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                      idea: `I want to build a ${whatText} that ${doesText}.`,
-                      contact: contactInfo
-                    })
-                  });
-
-                  if (response.ok) {
-                    // Success animation
-                    const contact = document.querySelector('.contact-form');
-                    const sendButton = document.querySelector('.send-button');
-                    const subtitle = document.querySelector('.final-subtitle');
-                    const header = document.querySelector('.header');
-
-                    contact.classList.add('fade-out');
-                    sendButton.classList.add('fade-out');
-                    subtitle.classList.add('fade-out');
-                    
-                    setTimeout(() => {
-                      contact.style.display = 'none';
-                      sendButton.style.display = 'none';
-                      subtitle.style.display = 'none';
-                      typeHeaderText(header, "Thanks!<br>I'll be in touch.", null);
-                    }, 500);
-                  } else {
-                    throw new Error('Failed to send');
-                  }
-                } catch (error) {
-                  alert('Oops! Something went wrong. Please try again.');
-                }
-              });
-
-              // Load and initialize Ko-fi widget
-              const kofiScript = document.createElement('script');
-              kofiScript.src = 'https://storage.ko-fi.com/cdn/scripts/overlay-widget.js';
-              document.head.appendChild(kofiScript);
-
-              kofiScript.onload = () => {
-                kofiWidgetOverlay.draw('andrewos', {
-                  'type': 'floating-chat',
-                  'floating-chat.donateButton.text': 'Support',
-                  'floating-chat.donateButton.background-color': '#2ecc71',
-                  'floating-chat.donateButton.text-color': '#ffffff',
-                  'floating-chat.width': 'auto',
-                  'floating-chat.position.bottom': '32px',
-                  'floating-chat.position.right': '16px',
-                  'floating-chat.animation.type': 'fade-in'
-                });
-
-                // Add animation to make the button appear smoothly
-                setTimeout(() => {
-                  const kofiIframe = document.querySelector('iframe[title="Ko-fi donations"]');
-                  if (kofiIframe) {
-                    kofiIframe.parentElement.classList.add('floating-kofi-button');
-                    setTimeout(() => {
-                      kofiIframe.parentElement.classList.add('fade-in');
-                    }, 200);
-                  }
-                }, 1000);
-              };
             });
           },
           vibecade: function () {
@@ -337,24 +228,49 @@
           },
         };
 
+        const shell = { cwd: '/' };
+
+        function dispatch(term, name, args) {
+          const resolved = core.resolveCommand(name, args, { cwd: shell.cwd });
+          if (resolved.kind === 'cd' && resolved.cwd) {
+            shell.cwd = resolved.cwd;
+            term.set_prompt(core.shellPrompt(shell.cwd));
+          }
+          runResolved(term, resolved);
+        }
+
         for (const name of Object.keys(core.TYPED_RESPONSES)) {
           commands[name] = function (...args) {
-            runResolved(this, core.resolveCommand(name, args));
+            dispatch(this, name, args);
           };
         }
         for (const name of Object.keys(core.LINK_RESPONSES)) {
           commands[name] = function (...args) {
-            runResolved(this, core.resolveCommand(name, args));
+            dispatch(this, name, args);
           };
         }
+        for (const name of ['ls', 'cd', 'cat', 'open', 'pwd', 'whoami', 'neofetch']) {
+          commands[name] = function (...args) {
+            dispatch(this, name, args);
+          };
+        }
+        commands.ask = function (...args) {
+          dispatch(this, 'ask', args);
+        };
+        commands.help = function () {
+          dispatch(this, 'help', []);
+        };
+        commands.clear = function () {
+          dispatch(this, 'clear', []);
+        };
 
         const result = await $("body").terminal(commands, {
-          greetings:
-            "\n\n\n                       ▀██                               ▄▄█▀▀██    ▄█▀▀▀▄█\n   ▄▄▄▄   ▄▄ ▄▄▄     ▄▄ ██  ▄▄▄ ▄▄    ▄▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄█▀    ██   ██▄▄  ▀\n  ▀▀ ▄██   ██  ██  ▄▀  ▀██   ██▀ ▀▀ ▄█▄▄▄██  ██  ██  █  ██      ██   ▀▀███▄\n  ▄█▀ ██   ██  ██  █▄   ██   ██     ██        ███ ███   ▀█▄     ██ ▄     ▀██\n  ▀█▄▄▀█▀ ▄██▄ ██▄ ▀█▄▄▀██▄ ▄██▄     ▀█▄▄▄▀    █   █     ▀▀█▄▄▄█▀  █▀▄▄▄▄█▀\n\n///////////////////\n//// Build 302 ////\n///////////////////\n" +
-            core.HELP_MESSAGE +
-            "\n",
-          prompt: '',
+          greetings: false,
+          prompt: core.shellPrompt('/'),
           checkArity: false,
+          onInit: function (term) {
+            playBoot(term);
+          },
         });
       return result;
       }

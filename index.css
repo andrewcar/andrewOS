@@ -2,6 +2,8 @@ html, body {
   height: 100%;
   margin: 0;
   padding: 0;
+  background: #12110e;
+  overflow-x: hidden;
 }
 
 /* Mobile height fix */
@@ -29,47 +31,68 @@ html, body {
     height: calc(100vh - 60px) !important;
     height: calc(100svh - 60px) !important;
     overflow-y: auto;
-    padding: 10px;
+    overflow-x: hidden;
+    padding: 8px 10px;
   }
   
   .terminal .terminal-scroller {
     height: 100% !important;
   }
   
-  /* ASCII art logo - dynamic responsive sizing */
-  .terminal-output div:first-child {
-    font-family: 'Courier New', 'Monaco', 'Menlo', monospace !important;
-    font-size: clamp(3px, 0.8vw, 14px) !important;
-    line-height: 1.0 !important;
-    letter-spacing: 0 !important;
-    word-spacing: 0 !important;
-    white-space: pre !important;
-    overflow-x: auto;
-    text-rendering: optimizeSpeed;
-    -webkit-font-feature-settings: "kern" 0;
-    font-feature-settings: "kern" 0;
-    position: sticky !important;
-    top: 0 !important;
-    background-color: #000 !important;
-    z-index: 10 !important;
-    margin: 0 !important;
-    padding: 10px 0 !important;
-    border-bottom: none !important;
-  }
-  
-  /* Input line mobile optimization */
+  .terminal .cmd,
+  .terminal .cmd-wrapper,
+  .terminal .cmd-editable,
+  .terminal textarea,
+  .terminal .prompt,
+  .terminal .terminal-command,
   .terminal .terminal-cursor {
     font-size: 16px !important;
+    max-width: 100%;
   }
-  
-  .terminal .terminal-command {
-    font-size: 16px !important;
+
+  .terminal .cmd {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 
 .terminal {
-  --color: rgba(0, 200, 0, 0.99);
-  --glow: 1;
+  --color: #f3ecdf;
+  --background: #12110e;
+  --link-color: #f3ecdf;
+  --glow: 0;
+  --size: 1;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.terminal .terminal-scroller,
+.terminal .terminal-output,
+.terminal .cmd,
+.terminal .cmd-wrapper {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.terminal .terminal-output div,
+.terminal .cmd .prompt {
+  white-space: pre-wrap !important;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+body.term-boot .terminal {
+  animation: term-phosphor 680ms ease both;
+}
+
+@keyframes term-phosphor {
+  0% { opacity: 0; filter: brightness(1.8); }
+  100% { opacity: 1; filter: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.term-boot .terminal {
+    animation: none;
+  }
 }
 
 @media screen and (min-width: 1200px) {

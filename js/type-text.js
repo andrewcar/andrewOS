@@ -5,18 +5,45 @@
 (function (global) {
   let generation = 0;
 
+  function prefersReducedMotion() {
+    try {
+      return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function paintHeader(element, lines) {
+    lines.forEach((line, index) => {
+      const lineEl = element.children[index];
+      if (!lineEl) return;
+      for (const ch of line) {
+        const span = document.createElement('span');
+        if (ch === ' ') span.innerHTML = '&nbsp;';
+        else span.textContent = ch;
+        span.classList.add('show');
+        lineEl.appendChild(span);
+      }
+    });
+  }
+
   function typeHeaderText(element, text, onComplete) {
     const myGeneration = ++generation;
     if (!element) return;
 
     element.innerHTML = '';
     const lines = String(text).split('<br>');
-    let currentLine = 0;
-    let currentChar = 0;
-
     for (let i = 0; i < lines.length; i++) {
       element.appendChild(document.createElement('div'));
     }
+
+    if (prefersReducedMotion()) {
+      paintHeader(element, lines);
+      if (typeof onComplete === 'function') onComplete();
+      return;
+    }
+    let currentLine = 0;
+    let currentChar = 0;
 
     function stillCurrent() {
       return myGeneration === generation;

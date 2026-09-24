@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ASK_HELP,
   ASK_NEED_QUESTION,
   HELP_COMMANDS,
   HELP_MESSAGE,
   LINK_RESPONSES,
   TYPED_RESPONSES,
   UNIX_DENIED,
+  bootLinesForWidth,
+  chunkAnswer,
   formatCommandList,
   isKnownHelpCommand,
   resolveCommand,
+  shellPrompt,
 } from '../../js/terminal-core.js';
 
 describe('formatCommandList', () => {
@@ -41,7 +45,48 @@ describe('resolveCommand', () => {
     expect(resolveCommand('clear')).toEqual({ kind: 'clear' });
     expect(resolveCommand('exit')).toEqual({ kind: 'exit' });
     expect(resolveCommand('vibecade')).toEqual({ kind: 'vibecade' });
-    expect(resolveCommand('ls')).toEqual({ kind: 'type', text: UNIX_DENIED });
+    expect(resolveCommand('vim')).toEqual({ kind: 'type', text: UNIX_DENIED });
+    expect(resolveCommand('mkdir')).toEqual({ kind: 'type', text: UNIX_DENIED });
+  });
+
+  it('lists and changes the fake filesystem', () => {
+    const root = resolveCommand('ls');
+    expect(root.text).toContain('projects/');
+    expect(root.text).toContain('apps/');
+    expect(root.text).toContain('social/');
+    expect(root.text).toContain('littlefly/');
+    expect(root.text).toContain('feedback');
+    expect(resolveCommand('cd', ['projects'])).toEqual({ kind: 'cd', cwd: '/projects' });
+    expect(resolveCommand('ls', [], { cwd: '/projects' }).text).toContain('andrewos.txt');
+    expect(resolveCommand('cat', ['feedback']).text).toMatch(/feedback form/i);
+    expect(resolveCommand('open', ['feedback'])).toMatchObject({ kind: 'navigate', href: '/feedback' });
+    expect(resolveCommand('open', ['littlefly'])).toMatchObject({
+      kind: 'navigate',
+      href: '/littleflywholeworld',
+    });
+    expect(resolveCommand('pwd', [], { cwd: '/social' }).text).toContain('~/social');
+  });
+
+  it('shares one identity panel and keeps the old aliases', () => {
+    expect(resolveCommand('whoami').text).toContain('Andrew Carvajal');
+    expect(resolveCommand('neofetch').text).toContain('andrew.carvajal@me.com');
+    expect(resolveCommand('whoami').text).toBe(resolveCommand('neofetch').text);
+    expect(resolveCommand('name').text).toContain('Andrew Carvajal');
+    expect(resolveCommand('email').text).toContain('andrew.carvajal@me.com');
+    expect(resolveCommand('phone').text).toContain('(954) 292-5454');
+    expect(resolveCommand('dob').text).toContain('April 26, 1990');
+    expect(shellPrompt('/')).toBe('guest@andrewos:~$ ');
+    expect(shellPrompt('/projects')).toBe('guest@andrewos:~/projects$ ');
+    expect(bootLinesForWidth(390)).toEqual(['andrewOS', 'Build 302']);
+    expect(bootLinesForWidth(1200)[0]).toBe('andrewOS');
+    expect(bootLinesForWidth(1200).length).toBeGreaterThan(2);
+  });
+
+  it('documents ask and chunks a one-shot reply', () => {
+    expect(resolveCommand('ask', ['--help'])).toEqual({ kind: 'echo', text: ASK_HELP });
+    expect(ASK_HELP).toMatch(/chunk/i);
+    expect(chunkAnswer('one two three four five', 10).join('')).toBe('one two three four five');
+    expect(chunkAnswer('one two three four five', 10).length).toBeGreaterThan(1);
   });
 
   it('returns unknown for empty or unrecognized names', () => {
@@ -55,8 +100,10 @@ describe('help catalog', () => {
     expect(HELP_COMMANDS).toContain('boredgames');
     expect(HELP_COMMANDS).toContain('vibecade');
     expect(HELP_MESSAGE).toContain('boredgames');
-    expect(HELP_MESSAGE).toContain('and vibecade');
+    expect(HELP_MESSAGE).toContain('vibecade');
+    expect(HELP_MESSAGE).toContain('whoami');
     expect(isKnownHelpCommand('linkedin')).toBe(true);
-    expect(isKnownHelpCommand('ask')).toBe(false);
+    expect(isKnownHelpCommand('ask')).toBe(true);
+    expect(isKnownHelpCommand('vim')).toBe(false);
   });
 });
