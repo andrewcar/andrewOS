@@ -57,11 +57,23 @@ export const IDENTITY_PANEL =
   `phone  ${IDENTITY.phone}\n` +
   `born   ${IDENTITY.dob}\n`;
 
+/** Pre-PR#3 greetings wordmark. One block so the sticky ASCII rules size the whole mark. */
+export const ASCII_BANNER =
+  '\n\n\n                       ▀██                               ▄▄█▀▀██    ▄█▀▀▀▄█\n' +
+  '   ▄▄▄▄   ▄▄ ▄▄▄     ▄▄ ██  ▄▄▄ ▄▄    ▄▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄█▀    ██   ██▄▄  ▀\n' +
+  '  ▀▀ ▄██   ██  ██  ▄▀  ▀██   ██▀ ▀▀ ▄█▄▄▄██  ██  ██  █  ██      ██   ▀▀███▄\n' +
+  '  ▄█▀ ██   ██  ██  █▄   ██   ██     ██        ███ ███   ▀█▄     ██ ▄     ▀██\n' +
+  '  ▀█▄▄▀█▀ ▄██▄ ██▄ ▀█▄▄▀██▄ ▄██▄     ▀█▄▄▄▀    █   █     ▀▀█▄▄▄█▀  █▀▄▄▄▄█▀\n' +
+  '\n///////////////////\n//// Build 302 ////\n///////////////////\n';
+
 export const BOOT_LINES = ['andrewOS', 'power  ok', 'Build 302', 'guest session'];
 
-/** Phone screens skip the extra POST lines so the prompt stays on the first screen. */
+/**
+ * Phone screens skip the extra POST lines so the ASCII mark and prompt
+ * stay on the first screen. The wordmark already carries andrewOS / Build 302.
+ */
 export function bootLinesForWidth(width) {
-  if (Number(width) > 0 && Number(width) <= 700) return ['andrewOS', 'Build 302'];
+  if (Number(width) > 0 && Number(width) <= 700) return [];
   return BOOT_LINES;
 }
 

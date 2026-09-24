@@ -38,8 +38,11 @@ test.describe('terminal', () => {
     await expect(page.locator('.terminal')).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('body')).toHaveAttribute('data-term-boot', 'ready', { timeout: 15_000 });
     await expect(page.locator('.terminal .cmd-prompt').first()).toContainText('guest@andrewos:~$');
-    await expect(page.locator('.terminal-output')).toContainText('Build 302', { timeout: 15_000 });
+    await expect(page.locator('.andrewos-banner')).toContainText('▄▄█▀▀██', { timeout: 15_000 });
+    await expect(page.locator('.andrewos-banner')).toContainText('//// Build 302 ////');
     await expect(page.locator('.terminal-output')).toContainText('try help, ls, or ask');
+    const phosphor = await page.locator('.terminal').evaluate((el) => getComputedStyle(el).getPropertyValue('--color'));
+    expect(phosphor.replace(/\s/g, '')).toContain('0,200,0');
     const promptBox = await page.locator('.terminal .cmd-prompt').first().boundingBox();
     expect(promptBox).toBeTruthy();
     expect(promptBox.y + promptBox.height).toBeLessThan((page.viewportSize()?.height || 800) + 1);
