@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>andrewOS</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
     <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
     <script src="https://unpkg.com/jquery.terminal/js/jquery.terminal.min.js"></script>
     <link
@@ -73,17 +73,55 @@
             return;
           }
           if (resolved.kind === 'ask') {
-            ask(resolved.question)
-              .then((answer) => {
-                term.pause();
-                typeText(term, answer, 69, () => {
-                  term.resume();
-                });
-              })
-              .catch((error) => {
-                console.log(error);
-              });
+            streamAsk(term, resolved.question);
+            return;
           }
+          if (resolved.kind === 'navigate' && resolved.href) {
+            term.echo(resolved.text || '');
+            window.location.assign(resolved.href);
+          }
+        }
+
+        function delay(ms) {
+          return new Promise((resolve) => setTimeout(resolve, ms));
+        }
+
+        async function streamAsk(term, question) {
+          const oldPrompt = term.get_prompt();
+          term.pause();
+          term.set_prompt('');
+          term.echo('');
+          try {
+            const answer = await ask(question);
+            const chunks = core.chunkAnswer(answer || '');
+            if (!chunks.length) term.echo('(no answer)');
+            for (const chunk of chunks) {
+              term.echo(chunk, { newline: false });
+              await delay(32);
+            }
+            if (chunks.length) term.echo('');
+          } catch (error) {
+            console.log(error);
+            term.echo('\ncould not reach the answer.\n');
+          } finally {
+            term.set_prompt(oldPrompt);
+            term.resume();
+          }
+        }
+
+        async function playBoot(term) {
+          document.body.classList.add('term-boot');
+          term.pause();
+          term.set_prompt('');
+          for (const line of core.BOOT_LINES) {
+            term.echo(line);
+            await delay(90);
+          }
+          term.echo(core.BOOT_HINT);
+          term.set_prompt(core.shellPrompt(shell.cwd));
+          document.body.classList.remove('term-boot');
+          document.body.dataset.termBoot = 'ready';
+          term.resume();
         }
 
         const commands = {
@@ -337,24 +375,49 @@
           },
         };
 
+        const shell = { cwd: '/' };
+
+        function dispatch(term, name, args) {
+          const resolved = core.resolveCommand(name, args, { cwd: shell.cwd });
+          if (resolved.kind === 'cd' && resolved.cwd) {
+            shell.cwd = resolved.cwd;
+            term.set_prompt(core.shellPrompt(shell.cwd));
+          }
+          runResolved(term, resolved);
+        }
+
         for (const name of Object.keys(core.TYPED_RESPONSES)) {
           commands[name] = function (...args) {
-            runResolved(this, core.resolveCommand(name, args));
+            dispatch(this, name, args);
           };
         }
         for (const name of Object.keys(core.LINK_RESPONSES)) {
           commands[name] = function (...args) {
-            runResolved(this, core.resolveCommand(name, args));
+            dispatch(this, name, args);
           };
         }
+        for (const name of ['ls', 'cd', 'cat', 'open', 'pwd', 'whoami', 'neofetch']) {
+          commands[name] = function (...args) {
+            dispatch(this, name, args);
+          };
+        }
+        commands.ask = function (...args) {
+          dispatch(this, 'ask', args);
+        };
+        commands.help = function () {
+          dispatch(this, 'help', []);
+        };
+        commands.clear = function () {
+          dispatch(this, 'clear', []);
+        };
 
         const result = await $("body").terminal(commands, {
-          greetings:
-            "\n\n\n                       ▀██                               ▄▄█▀▀██    ▄█▀▀▀▄█\n   ▄▄▄▄   ▄▄ ▄▄▄     ▄▄ ██  ▄▄▄ ▄▄    ▄▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄█▀    ██   ██▄▄  ▀\n  ▀▀ ▄██   ██  ██  ▄▀  ▀██   ██▀ ▀▀ ▄█▄▄▄██  ██  ██  █  ██      ██   ▀▀███▄\n  ▄█▀ ██   ██  ██  █▄   ██   ██     ██        ███ ███   ▀█▄     ██ ▄     ▀██\n  ▀█▄▄▀█▀ ▄██▄ ██▄ ▀█▄▄▀██▄ ▄██▄     ▀█▄▄▄▀    █   █     ▀▀█▄▄▄█▀  █▀▄▄▄▄█▀\n\n///////////////////\n//// Build 302 ////\n///////////////////\n" +
-            core.HELP_MESSAGE +
-            "\n",
-          prompt: '',
+          greetings: false,
+          prompt: core.shellPrompt('/'),
           checkArity: false,
+          onInit: function (term) {
+            playBoot(term);
+          },
         });
       return result;
       }

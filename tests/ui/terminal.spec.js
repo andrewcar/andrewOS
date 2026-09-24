@@ -36,7 +36,10 @@ test.describe('terminal', () => {
     await expect(page).toHaveTitle('andrewOS');
 
     await expect(page.locator('.terminal')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('body')).toHaveAttribute('data-term-boot', 'ready', { timeout: 15_000 });
+    await expect(page.locator('.terminal .cmd-prompt').first()).toContainText('guest@andrewos:~$');
     await expect(page.locator('.terminal-output')).toContainText('Build 302', { timeout: 15_000 });
+    await expect(page.locator('.terminal-output')).toContainText('try help, ls, or ask');
 
     // Prompt / cmd line present (desktop textarea or mobile contenteditable)
     const cmdLine = page.locator('.terminal .cmd-editable, .terminal .cmd textarea, .terminal textarea').first();
@@ -72,6 +75,32 @@ test.describe('terminal', () => {
         timeout: 45_000,
       })
       .toBeTruthy();
+
+    await exec('ls');
+    await expect(page.locator('.terminal-output')).toContainText('projects/', { timeout: 15_000 });
+    await expect(page.locator('.terminal-output')).toContainText('littlefly/');
+    await expect(page.locator('.terminal-output')).toContainText('feedback');
+
+    await exec('cd projects');
+    await expect(page.locator('.terminal .cmd-prompt').first()).toContainText('guest@andrewos:~/projects$', {
+      timeout: 15_000,
+    });
+    await exec('ls');
+    await expect(page.locator('.terminal-output')).toContainText('andrewos.txt', { timeout: 15_000 });
+    await exec('cd ~');
+
+    await exec('whoami');
+    await expect(page.locator('.terminal-output')).toContainText('guest@andrewos', { timeout: 15_000 });
+    await expect(page.locator('.terminal-output')).toContainText('(954) 292-5454');
+    await exec('neofetch');
+    await expect(page.locator('.terminal-output')).toContainText('andrew.carvajal@me.com');
+
+    await exec('ask --help');
+    await expect(page.locator('.terminal-output')).toContainText('ask <question>', { timeout: 20_000 });
+    await expect(page.locator('.terminal-output')).toContainText('chunk');
+
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(2);
 
     await exec('ask what is life');
     await expect.poll(() => askPayload, { timeout: 15_000 }).not.toBeNull();
