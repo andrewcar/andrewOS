@@ -143,6 +143,8 @@
               (0, eval)(typeSrc);
               const madlibSrc = await fetch('/js/madlib-placeholders.js').then((r) => r.text());
               (0, eval)(madlibSrc);
+              const openSrc = await fetch('/js/open-terminal.js').then((r) => r.text());
+              (0, eval)(openSrc);
 
               // Wait for DOM to be ready
               if (document.readyState === 'loading') {
@@ -156,6 +158,8 @@
               // Initial animation sequence
               const header = document.querySelector('.header');
               typeHeaderText(header, "Let's build<br>something.", () => {
+                const shell = document.querySelector('.shell-entry');
+                if (shell) shell.classList.add('fade-in');
                 setTimeout(() => {
                   document.querySelector('.madlib').classList.add('fade-in');
                   setTimeout(() => {

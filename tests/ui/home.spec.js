@@ -53,6 +53,7 @@ test.describe('landing page', () => {
     await expect(page.locator('.header')).toContainText(/something/i);
     await expect(page.locator('.madlib')).toHaveClass(/fade-in/, { timeout: 10_000 });
     await expect(page.locator('.initial-button')).toHaveClass(/fade-in/);
+    await expect(page.locator('a.shell-entry')).toHaveClass(/fade-in/);
 
     const anchors = page.locator('a[href]');
     const count = await anchors.count();
@@ -190,6 +191,52 @@ test.describe('landing page', () => {
       path: join(SCREENSHOT_DIR, `madlib-last-${testInfo.project.name}.png`),
       fullPage: true,
     });
+  });
+
+  test('shell prompt is the visible door into the terminal', async ({ page }, testInfo) => {
+    test.setTimeout(60_000);
+    await page.goto('/');
+
+    const entry = page.locator('a.shell-entry');
+    await expect(entry).toHaveClass(/fade-in/, { timeout: 15_000 });
+    await expect(entry).toBeVisible();
+    await expect(entry).toContainText('guest@andrewos:~$');
+    await expect(entry).toContainText('open terminal');
+    await expect(entry).toHaveAttribute('href', '/terminal.html');
+    await expect(entry.locator('.shell-cursor')).toBeAttached();
+
+    const ascii = page.locator('.ascii-art');
+    await expect(ascii).toHaveAttribute('onclick', /openAndrewTerminal/);
+
+    await entry.focus();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/terminal$/);
+    await expect(page.locator('.terminal')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('.terminal-output')).toContainText('Build 302', { timeout: 20_000 });
+
+    mkdirSync(SCREENSHOT_DIR, { recursive: true });
+    await page.screenshot({
+      path: join(SCREENSHOT_DIR, `terminal-entry-keyboard-${testInfo.project.name}.png`),
+      fullPage: true,
+    });
+  });
+
+  test('shell prompt click uses the same terminal swap', async ({ page }, testInfo) => {
+    test.setTimeout(60_000);
+    await page.goto('/');
+    const entry = page.locator('a.shell-entry');
+    await expect(entry).toHaveClass(/fade-in/, { timeout: 15_000 });
+
+    mkdirSync(SCREENSHOT_DIR, { recursive: true });
+    await page.screenshot({
+      path: join(SCREENSHOT_DIR, `terminal-entry-home-${testInfo.project.name}.png`),
+      fullPage: true,
+    });
+
+    await entry.click();
+    await expect(page).toHaveURL(/\/terminal$/);
+    await expect(page.locator('.terminal')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('.terminal-output')).toContainText('Build 302', { timeout: 20_000 });
   });
 
   test('madlib reloads never show empty placeholders', async ({ page }, testInfo) => {
