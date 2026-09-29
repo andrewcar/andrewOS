@@ -1,5 +1,5 @@
 import { PROVIDERS, knights, layoutSeats, markGlyph, presentRoster, seatById } from './roster.js';
-import { currentTally, dockSeatIds, enabledKnights, isBusy, latestProposal, stripText } from './state.js';
+import { currentTally, dockSeatIds, enabledKnights, isBusy, latestProposal, resolveArbiter, stripText } from './state.js';
 
 export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -12,7 +12,11 @@ export function escapeHtml(value) {
 }
 
 function modeLabel(secrets, state, roster) {
-  const needed = enabledKnights(state, roster).map((seat) => seat.providerId);
+  const arbiter = resolveArbiter(state, roster);
+  const needed = [...new Set([
+    arbiter?.providerId,
+    ...enabledKnights(state, roster).map((seat) => seat.providerId),
+  ].filter(Boolean))];
   const have = needed.filter((id) => secrets?.[id]);
   if (!have.length) return 'Preview';
   if (have.length === needed.length) return 'Live';
@@ -28,6 +32,7 @@ function panelKey(state, roster) {
     state.phase.revision || '',
     state.phase.stalled ? '1' : '',
     state.phase.error || '',
+    state.arbiterId || '',
     proposal?.id || '',
     proposal?.approach || '',
     (proposal?.allocations || []).map((row) => `${row.seatId}:${row.percent}`).join(','),
@@ -40,7 +45,7 @@ function tableStructureKey(state, roster) {
   const ids = state.focus === 'chat'
     ? dockSeatIds(state, roster)
     : presentRoster(roster, state.kingName).map((seat) => seat.id);
-  return [state.focus, state.phase.name, state.kingName, ids.join('.')].join('|');
+  return [state.focus, state.phase.name, state.kingName, state.arbiterId || '', ids.join('.')].join('|');
 }
 
 function visibleSeats(state, roster) {
@@ -64,7 +69,8 @@ function tableHtml(state, roster) {
     const seatState = state.seats[seat.id];
     const enabled = seat.role === 'king' ? true : seatState?.enabled !== false;
     const status = seatState?.status || 'idle';
-    const canToggle = seat.role === 'knight' && mode === 'full' && (
+    const arbiterId = resolveArbiter(state, roster)?.id;
+    const canToggle = seat.role !== 'king' && seat.id !== arbiterId && mode === 'full' && (
       state.phase.name === 'seats' || state.phase.name === 'prompt' || quest
     );
     const canTarget = mode === 'dock';
@@ -90,7 +96,7 @@ function tableHtml(state, roster) {
   </div>`;
 }
 
-function proposalHtml(proposal, roster) {
+function proposalHtml(proposal, roster, arbiterName) {
   if (!proposal) return '';
   const rows = proposal.allocations.filter((row) => row.percent > 0).map((row) => {
     const seat = seatById(row.seatId, roster);
@@ -101,25 +107,64 @@ function proposalHtml(proposal, roster) {
     </div>`;
   }).join('');
   return `<article class="card" data-testid="proposal-card">
-    <div class="card-kicker">Delegation proposal · Rev ${proposal.revision}${proposal.source === 'preview' ? ' · preview' : ''}</div>
+    <div class="card-kicker">Delegation proposal · Rev ${proposal.revision} · ${escapeHtml(arbiterName)}${proposal.source === 'preview' ? ' · preview' : ''}</div>
     <p>${escapeHtml(proposal.approach)}</p>
     ${rows}
   </article>`;
 }
 
-function panelHtml(state, roster) {
+function arbiterCopy(state, roster, secrets) {
+  const seat = resolveArbiter(state, roster);
+  if (!seat) return '';
+  if (!secrets?.[seat.providerId]) {
+    return `${seat.name} has no API key yet. A quest still runs, and the split is marked as a local preview.`;
+  }
+  if (seat.providerId === 'meta') {
+    return `${seat.name} is the arbiter. Muse has no browser relay, so a live split cannot be drafted.`;
+  }
+  return `${seat.name} is the arbiter.`;
+}
+
+function arbiterControl(state, roster, secrets) {
+  const current = resolveArbiter(state, roster);
+  const choices = roster.filter((seat) => seat.role !== 'king');
+  const options = choices.map((seat) => (
+    `<option value="${escapeHtml(seat.id)}"${seat.id === current?.id ? ' selected' : ''}>${escapeHtml(seat.name)}</option>`
+  )).join('');
+  return `<label class="arbiter-field">Arbiter
+      <select data-testid="arbiter-select" aria-label="Arbiter">${options}</select>
+    </label>
+    <p class="muted" data-testid="arbiter-note">${escapeHtml(arbiterCopy(state, roster, secrets))}</p>`;
+}
+
+export function arbiterSettingsCopy(state, roster, secrets) {
+  const seat = resolveArbiter(state, roster);
+  if (!seat) return '';
+  if (!secrets?.[seat.providerId]) {
+    return `${seat.name} is the arbiter and has no key yet. Add that seat's key, or the quest stays on a local preview.`;
+  }
+  if (seat.providerId === 'meta') {
+    return `${seat.name} is the arbiter. The Muse key is saved, and this host has no browser relay for it.`;
+  }
+  return `${seat.name} is the arbiter. That seat's key is used for proposals and arbiter turns.`;
+}
+
+function panelHtml(state, roster, secrets) {
   const phase = state.phase.name;
   const count = enabledKnights(state, roster).length;
+  const arbiter = resolveArbiter(state, roster);
   if (phase === 'seats') {
     return `<div class="planning-scroll"><div class="card">
       <div class="card-kicker">Seats</div>
-      <p>Confirm your seats, then set the job on the table. ${count} knight${count === 1 ? '' : 's'} enabled.</p>
+      <p>Confirm your seats, then set the job on the table. ${count} seat${count === 1 ? '' : 's'} will share the work.</p>
+      ${arbiterControl(state, roster, secrets)}
       <button type="button" class="primary" data-action="confirm-seats" data-testid="confirm-seats" ${count < 1 ? 'disabled' : ''}>Confirm seats</button>
     </div></div>`;
   }
   if (phase === 'prompt') {
     return `<div class="planning-scroll"><div class="card" data-testid="prompt-card">
       <label class="card-kicker" for="quest-prompt">The job</label>
+      ${arbiterControl(state, roster, secrets)}
       <textarea id="quest-prompt" data-testid="prompt-textarea" rows="4" maxlength="8000" placeholder="Describe the job for the council…">${escapeHtml(state.prompt)}</textarea>
       <div class="row">
         <span class="muted" data-count>${state.prompt.trim().length} / 8000</span>
@@ -136,7 +181,7 @@ function panelHtml(state, roster) {
   } else if (phase === 'proposal' && state.phase.status === 'error') {
     actions = `<p class="warn">${escapeHtml(state.phase.error || 'Drafting failed.')}</p><button type="button" class="primary" data-action="retry-proposal">Retry</button>`;
   } else if (phase === 'proposal' && state.phase.status === 'drafting') {
-    actions = `<p class="muted">BotBot is drafting the split.</p>`;
+    actions = `<p class="muted">${escapeHtml(arbiter?.name || 'BotBot')} is drafting the split.</p>`;
   } else if (phase === 'voting') {
     actions = `<p data-testid="tally">${score.pending ? `${score.agree + score.disagree} of ${score.agree + score.disagree + score.pending + score.failed} votes in` : `${score.agree} agree · ${score.disagree} disagree`}${state.phase.stalled ? ' · divided' : ''}</p>`;
     if (state.phase.stalled) {
@@ -151,11 +196,11 @@ function panelHtml(state, roster) {
   }
   const revision = phase === 'ready'
     ? `<label class="revision">Note for a revision
-        <input data-testid="revision-note" maxlength="400" placeholder="Optional note for BotBot" />
+        <input data-testid="revision-note" maxlength="400" placeholder="Optional note for ${escapeHtml(arbiter?.name || 'BotBot')}" />
       </label>`
     : '';
   return `<div class="planning-scroll"><ul class="feed" data-testid="planning-feed">${feed}</ul>
-    ${proposalHtml(proposal, roster)}
+    ${proposalHtml(proposal, roster, arbiter?.name || 'BotBot')}
     ${revision}</div>
     <div class="planning-actions">${actions}</div>`;
 }
@@ -198,7 +243,8 @@ function fillBody(node, message) {
 function seatControlLabel(seat, state, enabled) {
   if (!seat) return '';
   if (state.focus === 'chat' && seat.role !== 'king') return `Talk to ${seat.name}`;
-  if (seat.role === 'knight') return `${enabled ? 'Disable' : 'Enable'} ${seat.name}`;
+  if (seat.id === (state.arbiterId || 'botbot')) return seat.name;
+  if (seat.role !== 'king') return `${enabled ? 'Disable' : 'Enable'} ${seat.name}`;
   return seat.name;
 }
 
@@ -291,7 +337,7 @@ export function sync(root, model, roster) {
   if (model.screen === 'settings') {
     const note = root.querySelector('[data-settings-note]');
     if (note) note.textContent = model.settingsNote || '';
-    paintKeyState(root, model.secrets);
+    paintKeyState(root, model, roster);
     return;
   }
   updateApp(root, model, roster);
@@ -357,6 +403,7 @@ function mountSettings(root, model, roster) {
     <section class="empty-keys" data-testid="keys-empty" ${secretsEmpty(model.secrets) ? '' : 'hidden'}>
       <p>No provider keys yet. The council can still preview a quest on this device. Add a key to speak through that seat.</p>
     </section>
+    <p class="fine" data-testid="arbiter-key-note">${escapeHtml(arbiterSettingsCopy(model.state, roster, model.secrets))}</p>
     <form data-testid="settings-form">
       ${rows}
       <div class="row">
@@ -387,12 +434,15 @@ function mountSettings(root, model, roster) {
   void roster;
 }
 
-function paintKeyState(root, secrets) {
+function paintKeyState(root, model, roster) {
+  const secrets = model.secrets;
   root.querySelectorAll('[data-key-state]').forEach((node) => {
     node.textContent = secrets?.[node.dataset.keyState] ? 'Saved on this device' : 'Not set';
   });
   const empty = root.querySelector('[data-testid="keys-empty"]');
   if (empty) empty.hidden = !secretsEmpty(secrets);
+  const note = root.querySelector('[data-testid="arbiter-key-note"]');
+  if (note) note.textContent = arbiterSettingsCopy(model.state, roster, secrets);
 }
 
 function mountApp(root, model, roster) {
@@ -447,6 +497,10 @@ function mountApp(root, model, roster) {
     if (action === 'target') model.onTarget(control.dataset.seat);
     if (action === 'reply') model.onReply(control.dataset.reply);
     if (action === 'clear-target') model.onTarget(null);
+  });
+  app.addEventListener('change', (event) => {
+    if (!event.target.matches('[data-testid="arbiter-select"]')) return;
+    model.onArbiter(event.target.value);
   });
   app.addEventListener('input', (event) => {
     if (!event.target.matches('[data-testid="prompt-textarea"]')) return;
@@ -526,7 +580,7 @@ function updateApp(root, model, roster) {
       ? [prompt.selectionStart, prompt.selectionEnd]
       : null;
     planning.dataset.key = nextPanel;
-    planning.innerHTML = panelHtml(state, roster);
+    planning.innerHTML = panelHtml(state, roster, model.secrets);
     if (selection) {
       const next = planning.querySelector('[data-testid="prompt-textarea"]');
       if (next) {
@@ -537,6 +591,10 @@ function updateApp(root, model, roster) {
   } else {
     const count = planning.querySelector('[data-count]');
     if (count) count.textContent = `${state.prompt.trim().length} / 8000`;
+    const arbiterSelect = planning.querySelector('[data-testid="arbiter-select"]');
+    if (arbiterSelect && arbiterSelect.value !== (state.arbiterId || 'botbot')) {
+      arbiterSelect.value = state.arbiterId || 'botbot';
+    }
   }
   syncMessages(root.querySelector('.chat-inner'), state, roster, Boolean(returningChat));
   if (returningChat && scroller) {

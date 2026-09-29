@@ -204,3 +204,7 @@ async function decryptPayload(raw, aesKey) {
 export function questStorageKey(userId) {
   return `round-table:v1:${userId}`;
 }
+
+export function arbiterStorageKey(userId) {
+  return `round-table:arbiter:v1:${userId}`;
+}

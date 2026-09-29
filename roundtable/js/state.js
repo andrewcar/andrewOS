@@ -1,4 +1,4 @@
-import { knights, seatById } from './roster.js';
+import { seatById } from './roster.js';
 
 /**
  * Prompt anchor. The old client painted this card in the center of the stage,
@@ -6,7 +6,19 @@ import { knights, seatById } from './roster.js';
  */
 export const PROMPT_ANCHOR = 'planning-panel';
 
-export function createState({ now, sessionId, kingName, roster }) {
+export function normalizeArbiterId(roster, arbiterId) {
+  const chosen = roster.find((seat) => seat.id === arbiterId && seat.role !== 'king');
+  if (chosen) return chosen.id;
+  const fallback = roster.find((seat) => seat.id === 'botbot' && seat.role !== 'king')
+    || roster.find((seat) => seat.role !== 'king');
+  return fallback?.id || 'botbot';
+}
+
+export function resolveArbiter(state, roster) {
+  return seatById(normalizeArbiterId(roster, state?.arbiterId), roster);
+}
+
+export function createState({ now, sessionId, kingName, roster, arbiterId }) {
   const seats = {};
   for (const seat of roster) {
     if (seat.role === 'king') continue;
@@ -23,6 +35,7 @@ export function createState({ now, sessionId, kingName, roster }) {
     version: 1,
     sessionId,
     kingName: kingName || 'You',
+    arbiterId: normalizeArbiterId(roster, arbiterId),
     phase: { name: 'seats' },
     seats,
     prompt: '',
@@ -38,8 +51,12 @@ export function createState({ now, sessionId, kingName, roster }) {
   };
 }
 
+/** Workers on the split. The active arbiter orchestrates and does not take a share. */
 export function enabledKnights(state, roster) {
-  return knights(roster).filter((seat) => state.seats[seat.id]?.enabled);
+  const arbiterId = resolveArbiter(state, roster)?.id;
+  return roster
+    .filter((seat) => seat.role !== 'king' && seat.id !== arbiterId && state.seats[seat.id]?.enabled)
+    .sort((a, b) => a.order - b.order);
 }
 
 export function latestProposal(state) {
@@ -73,11 +90,12 @@ export function dockSeatIds(state, roster) {
   const allocated = new Set(
     (proposal?.allocations || []).filter((row) => row.percent > 0).map((row) => row.seatId),
   );
+  const arbiterId = resolveArbiter(state, roster)?.id;
   return roster.filter((seat) => {
     if (seat.role === 'king') return false;
     const seatState = state.seats[seat.id];
     if (!seatState?.enabled) return false;
-    if (seat.role === 'arbiter') return true;
+    if (seat.id === arbiterId) return true;
     if (seatState.joinedMidQuest) return true;
     if (!proposal) return true;
     return allocated.has(seat.id);
@@ -109,7 +127,9 @@ export function stripText(state, roster, now) {
     return last?.text || 'Opening the quest…';
   }
   if (active) return active;
-  if (state.phase.name === 'proposal' && state.phase.status === 'drafting') return 'BotBot · drafting';
+  if (state.phase.name === 'proposal' && state.phase.status === 'drafting') {
+    return `${resolveArbiter(state, roster)?.name || 'BotBot'} · drafting`;
+  }
   if (state.phase.name === 'voting') return 'The council is weighing the split…';
   if (state.phase.name === 'implementing') return 'Live · the council is listening';
   return '';
@@ -132,7 +152,8 @@ export function reduce(state, action, ctx) {
       const phaseOk = state.phase.name === 'seats'
         || state.phase.name === 'prompt'
         || (state.phase.name === 'implementing' && state.focus === 'table');
-      if (!seat || seat.role !== 'knight' || !current || !phaseOk) return state;
+      const arbiterId = resolveArbiter(state, ctx.roster)?.id;
+      if (!seat || seat.role === 'king' || seat.id === arbiterId || !current || !phaseOk) return state;
       if (current.enabled === action.enabled) return state;
       if (!action.enabled && enabledKnights(state, ctx.roster).length <= 1) return state;
       const nextSeat = {
@@ -145,7 +166,7 @@ export function reduce(state, action, ctx) {
       const messages = action.enabled && state.phase.name === 'implementing'
         ? [...state.messages, {
           id: action.messageId,
-          seatId: 'botbot',
+          seatId: resolveArbiter(state, ctx.roster)?.id || 'botbot',
           kind: 'status',
           text: `${seat.name} joined the quest.`,
           status: 'done',
@@ -292,7 +313,8 @@ export function reduce(state, action, ctx) {
     }
     case 'TARGET_SET': {
       if (state.phase.name !== 'implementing') return state;
-      if (action.seatId && action.seatId !== 'botbot' && !state.seats[action.seatId]?.enabled) return state;
+      const arbiterId = resolveArbiter(state, ctx.roster)?.id;
+      if (action.seatId && action.seatId !== arbiterId && !state.seats[action.seatId]?.enabled) return state;
       return touch(state, now, {
         targetSeatId: action.seatId || null,
         replyTo: action.replyTo || null,
@@ -356,12 +378,30 @@ export function reduce(state, action, ctx) {
         },
       });
     }
+    case 'ARBITER_SET': {
+      if (state.phase.name !== 'seats' && state.phase.name !== 'prompt') return state;
+      const seat = seatById(action.seatId, ctx.roster);
+      if (!seat || seat.role === 'king' || !state.seats[seat.id]) return state;
+      if (state.arbiterId === seat.id) return state;
+      const workers = ctx.roster.filter((item) => (
+        item.role !== 'king' && item.id !== seat.id && state.seats[item.id]?.enabled
+      ));
+      if (workers.length < 1) return state;
+      return touch(state, now, {
+        arbiterId: seat.id,
+        seats: {
+          ...state.seats,
+          [seat.id]: { ...state.seats[seat.id], enabled: true },
+        },
+      });
+    }
     case 'SESSION_RESET':
       return createState({
         now,
         sessionId: ctx.id('sess'),
         kingName: state.kingName,
         roster: ctx.roster,
+        arbiterId: ctx.arbiterId || state.arbiterId,
       });
     default:
       return state;

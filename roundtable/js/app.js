@@ -1,8 +1,8 @@
 import { createAudio } from './audio.js';
-import { createVault, questStorageKey } from './auth.js';
+import { arbiterStorageKey, createVault, questStorageKey } from './auth.js';
 import { createOrchestrator } from './orchestrator.js';
 import { ROSTER, seatById } from './roster.js';
-import { createState, isBusy, reduce } from './state.js';
+import { createState, isBusy, normalizeArbiterId, reduce } from './state.js';
 import { paintStrip, sync } from './ui.js';
 
 const root = document.querySelector('#app');
@@ -11,10 +11,21 @@ const vault = createVault({ storage: localStorage, session: sessionStorage });
 
 let sequence = 0;
 const nid = (kind) => `${kind}_${(sequence += 1).toString(36)}`;
+function readArbiterPref(userId) {
+  const stored = userId ? localStorage.getItem(arbiterStorageKey(userId)) : '';
+  return normalizeArbiterId(ROSTER, stored);
+}
+
+function writeArbiterPref(userId, seatId) {
+  if (!userId) return;
+  localStorage.setItem(arbiterStorageKey(userId), normalizeArbiterId(ROSTER, seatId));
+}
+
 const context = () => ({
   now: () => new Date().toISOString(),
   id: nid,
   roster: ROSTER,
+  arbiterId: model.account ? readArbiterPref(model.account.id) : model.state?.arbiterId,
 });
 
 const model = {
@@ -52,6 +63,7 @@ function loadQuest(account) {
     if (parsed.phase.name === 'implementing' && parsed.phase.kickoff === 'running' && parsed.messages?.length) {
       parsed.phase = { ...parsed.phase, kickoff: 'done' };
     }
+    parsed.arbiterId = normalizeArbiterId(ROSTER, parsed.arbiterId || readArbiterPref(account.id));
     return parsed;
   } catch {
     return null;
@@ -123,6 +135,7 @@ function dispatch(action) {
   model.state = reduce(model.state, action, context());
   if (model.state === prev) return;
   model.armReset = false;
+  if (action.type === 'ARBITER_SET') writeArbiterPref(model.account?.id, model.state.arbiterId);
   persist();
   sounds(prev, model.state, action);
   render(Boolean(prevFocus && prevFocus !== model.state.focus));
@@ -166,7 +179,9 @@ function enter(account, aesKey, secrets) {
     sessionId: nid('sess'),
     kingName: account.name,
     roster: ROSTER,
+    arbiterId: readArbiterPref(account.id),
   });
+  writeArbiterPref(account.id, model.state.arbiterId);
   model.screen = 'app';
   model.authPending = false;
   model.authError = '';
@@ -279,6 +294,13 @@ model.onUnlock = async (password) => {
 
 model.onPrompt = (text) => dispatch({ type: 'PROMPT_CHANGED', text });
 model.onConfirm = () => dispatch({ type: 'SEATS_CONFIRMED' });
+model.onArbiter = (seatId) => {
+  dispatch({ type: 'ARBITER_SET', seatId });
+  const select = document.querySelector('[data-testid="arbiter-select"]');
+  if (select && model.state && select.value !== model.state.arbiterId) {
+    select.value = model.state.arbiterId;
+  }
+};
 model.onSubmitPrompt = () => dispatch({ type: 'PROMPT_SUBMITTED' });
 model.onCallVote = () => dispatch({ type: 'VOTE_CALLED' });
 model.onRetry = () => dispatch({ type: 'PROPOSAL_RETRY' });

@@ -123,4 +123,39 @@ test.describe('round table', () => {
     await expect(page.getByTestId('status-strip')).toContainText(/thinking|working|handoff|Opening|Live/i);
     await expect(page.locator('.bubble').last()).toContainText(/start|share|cut|%/i, { timeout: 15_000 });
   });
+
+  test('uses the arbiter picked on the seats card', async ({ page }, testInfo) => {
+    test.setTimeout(45_000);
+    await page.goto('/roundtable/');
+    await page.getByLabel('Display name').fill('Ada');
+    await page.getByLabel('Email').fill(`arbiter-${testInfo.project.name}@example.com`);
+    await page.getByLabel('Password').fill('correct-horse');
+    await page.getByTestId('auth-form').getByRole('button', { name: 'Create account' }).click();
+
+    const arbiter = page.getByTestId('arbiter-select');
+    await expect(arbiter).toHaveValue('botbot');
+    await arbiter.selectOption('claude');
+    await expect(arbiter).toHaveValue('claude');
+    await expect(page.getByTestId('arbiter-note')).toContainText(/ClaudeBot has no API key/i);
+
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await expect(page.getByTestId('arbiter-key-note')).toContainText(/ClaudeBot is the arbiter and has no key/i);
+    await page.getByRole('button', { name: 'Back' }).click();
+
+    await page.getByTestId('new-table').click();
+    await page.getByTestId('new-table').click();
+    await expect(page.getByTestId('arbiter-select')).toHaveValue('claude');
+    await page.getByTestId('confirm-seats').click();
+    await expect(page.getByTestId('arbiter-select')).toHaveValue('claude');
+    await page.getByTestId('prompt-textarea').fill('Sketch a landing page');
+    await page.getByTestId('prompt-submit').click();
+    await expect(page.getByTestId('planning-feed')).toContainText(/ClaudeBot is thinking/i);
+    await expect(page.getByTestId('planning-feed')).toContainText(/ClaudeBot has no API key/i);
+    await expect(page.getByTestId('proposal-card')).toContainText(/ClaudeBot/);
+    await expect(page.getByTestId('proposal-card')).toContainText(/preview/i);
+
+    await page.reload();
+    await expect(page.getByTestId('proposal-card')).toContainText(/ClaudeBot/);
+    expect(page.url()).not.toContain('relay.andrewos.com');
+  });
 });

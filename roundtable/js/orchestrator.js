@@ -1,15 +1,15 @@
 import { buildProposal } from './split.js';
 import { seatById } from './roster.js';
 import { blockedLine, heartbeatLine, initialStatusLine } from './progress.js';
-import { enabledKnights, latestProposal } from './state.js';
+import { enabledKnights, latestProposal, resolveArbiter } from './state.js';
 import { completeLive } from './providers.js';
 
-export function previewReply(seat, prompt, question, allocation) {
+export function previewReply(seat, prompt, question, allocation, asArbiter = false) {
   const share = allocation
     ? `${allocation.percent}% · ${allocation.responsibility}`
     : 'a supporting pass';
   const clip = String(question || prompt || '').trim().slice(0, 160);
-  if (seat.role === 'arbiter') {
+  if (asArbiter || seat.role === 'arbiter') {
     return `The split stands. ${clip ? `On “${clip}”, the lead seat should take the first cut.` : 'Ask a seat if you want that voice alone.'}`;
   }
   return `${share}. ${clip ? `For “${clip}”, ` : ''}I'd ship a first cut and name the risk before the next handoff.`;
@@ -109,20 +109,28 @@ export function createOrchestrator({
 
   async function draft(token) {
     const state = getState();
-    const bot = seatById('botbot', roster);
-    dispatch({ type: 'SET_SEAT_STATUS', seatId: 'botbot', status: 'thinking', now: now() });
+    const bot = resolveArbiter(state, roster);
+    dispatch({ type: 'SET_SEAT_STATUS', seatId: bot.id, status: 'thinking', now: now() });
     await speakStatus(token, bot, initialStatusLine(bot.name, 'thinking'), 'feed', true);
     const knightsOn = enabledKnights(state, roster);
     let proposal = null;
-    const secret = getSecrets().arbiter;
-    if (secret) {
+    const secret = getSecrets()[bot.providerId];
+    if (!secret) {
+      await speakStatus(
+        token,
+        bot,
+        `${bot.name} has no API key on this device. Drafting a local preview.`,
+        'feed',
+      );
+      await delay(320);
+    } else {
       const stop = watch(token, bot, 'feed');
       let result = { ok: false, message: 'The provider call failed.' };
       try {
         result = await complete({
-          providerId: 'arbiter',
+          providerId: bot.providerId,
           apiKey: secret,
-          system: 'You are BotBot, arbiter of the Round Table. Reply with JSON only: {"approach": string, "allocations": [{"seatId": string, "percent": number, "responsibility": string}]}. Percents must sum to 100. Only use the given seat ids.',
+          system: `You are ${bot.name}, arbiter of the Round Table. Reply with JSON only: {"approach": string, "allocations": [{"seatId": string, "percent": number, "responsibility": string}]}. Percents must sum to 100. Only use the given seat ids.`,
           user: JSON.stringify({
             prompt: state.prompt,
             note: state.phase.note || '',
@@ -136,12 +144,17 @@ export function createOrchestrator({
       if (!alive(token)) return;
       if (result.ok) {
         proposal = parseLiveProposal(result.text, { id: id('prop'), revision: state.phase.revision, knightsOn });
+        if (!proposal) {
+          await speakStatus(token, bot, `${bot.name} could not use the provider reply. Drafting a local preview.`, 'feed');
+        }
+      } else {
+        await speakStatus(
+          token,
+          bot,
+          `${bot.name} could not draft a live split. ${result.message} Drafting a local preview.`,
+          'feed',
+        );
       }
-      if (!proposal) {
-        await speakStatus(token, bot, 'BotBot could not use the provider reply. Drafting a local split.', 'feed');
-      }
-    } else {
-      await delay(320);
     }
     if (!alive(token)) return;
     if (!proposal) {
@@ -154,7 +167,7 @@ export function createOrchestrator({
         source: 'preview',
       });
     }
-    dispatch({ type: 'SET_SEAT_STATUS', seatId: 'botbot', status: 'idle', now: now() });
+    dispatch({ type: 'SET_SEAT_STATUS', seatId: bot.id, status: 'idle', now: now() });
     dispatch({ type: 'PROPOSAL_RECEIVED', proposal });
   }
 
@@ -162,7 +175,9 @@ export function createOrchestrator({
     const state = getState();
     const proposal = latestProposal(state);
     if (!proposal) return;
-    const rows = enabledKnights(state, roster);
+    const bot = resolveArbiter(state, roster);
+    await speakStatus(token, bot, `${bot.name} is opening the vote.`, 'feed');
+    const rows = enabledKnights(getState(), roster);
     for (let index = 0; index < rows.length; index += 1) {
       if (!alive(token) || getState().phase.name !== 'voting') return;
       const seat = rows[index];
@@ -194,12 +209,12 @@ export function createOrchestrator({
   async function kickoff(token) {
     const state = getState();
     const proposal = latestProposal(state);
-    const bot = seatById('botbot', roster);
+    const bot = resolveArbiter(state, roster);
     dispatch({
       type: 'MESSAGE_APPENDED',
       message: {
         id: id('msg'),
-        seatId: 'botbot',
+        seatId: bot.id,
         kind: 'chat',
         text: `Plan approved. ${proposal?.approach || 'The table is open.'}`,
         status: 'done',
@@ -260,15 +275,19 @@ export function createOrchestrator({
   async function converse(token, question) {
     const state = getState();
     const proposal = latestProposal(state);
+    const arbiter = resolveArbiter(state, roster);
     let seatId = state.targetSeatId;
     if (!seatId) {
       const lead = [...(proposal?.allocations || [])].sort((a, b) => b.percent - a.percent)[0];
-      seatId = lead?.seatId || 'botbot';
+      seatId = lead?.seatId || arbiter.id;
       const leadSeat = seatById(seatId, roster);
-      await speakStatus(token, seatById('botbot', roster), `Handing this to ${leadSeat?.name || 'the table'}…`, 'chat');
+      if (seatId !== arbiter.id) {
+        await speakStatus(token, arbiter, `Handing this to ${leadSeat?.name || 'the table'}…`, 'chat');
+      }
     }
     const seat = seatById(seatId, roster);
     if (!seat) return;
+    const asArbiter = seat.id === arbiter.id;
     dispatch({ type: 'SET_SEAT_STATUS', seatId: seat.id, status: 'thinking', now: now() });
     await speakStatus(token, seat, initialStatusLine(seat.name, 'thinking'), 'chat', true);
     const secret = getSecrets()[seat.providerId];
@@ -317,7 +336,10 @@ export function createOrchestrator({
     } else {
       await delay(260);
       if (!alive(token)) return;
-      await streamPreview(token, seat, previewReply(seat, state.prompt, question, allocation));
+      if (asArbiter) {
+        await speakStatus(token, seat, `${seat.name} has no API key on this device. This reply is a local preview.`, 'chat');
+      }
+      await streamPreview(token, seat, previewReply(seat, state.prompt, question, allocation, asArbiter));
     }
     if (!alive(token)) return;
     if (getState().seats[seat.id]?.status !== 'blocked') {

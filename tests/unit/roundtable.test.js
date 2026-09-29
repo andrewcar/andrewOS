@@ -172,6 +172,87 @@ describe('round table council', () => {
     expect(king).toHaveLength(1);
     expect(king[0].text).toBe('Hello there');
   });
+
+  it('keeps a chosen arbiter and will not borrow another seat key', async () => {
+    const round = harness();
+    expect(round.state.arbiterId).toBe('botbot');
+    round.dispatch({ type: 'ARBITER_SET', seatId: 'claude' });
+    expect(round.state.arbiterId).toBe('claude');
+    expect(enabledKnights(round.state, ROSTER).map((seat) => seat.id)).not.toContain('claude');
+    expect(enabledKnights(round.state, ROSTER).map((seat) => seat.id)).toContain('botbot');
+    round.dispatch({ type: 'SEAT_TOGGLED', seatId: 'claude', enabled: false });
+    expect(round.state.seats.claude.enabled).toBe(true);
+    round.ctx.arbiterId = 'claude';
+    round.dispatch({ type: 'SESSION_RESET' });
+    expect(round.state.phase.name).toBe('seats');
+    expect(round.state.arbiterId).toBe('claude');
+
+    let state = round.state;
+    let n = 0;
+    const calls = [];
+    const orchestrator = createOrchestrator({
+      getState: () => state,
+      dispatch(action) { state = reduce(state, action, round.ctx); },
+      getSecrets: () => ({ arbiter: 'sk-bot-only' }),
+      roster: ROSTER,
+      delay: async () => {},
+      now: () => '2026-01-01T00:00:00.000Z',
+      id: (kind) => `${kind}_${(n += 1)}`,
+      complete: async (request) => {
+        calls.push(request);
+        throw new Error('should not call a provider');
+      },
+    });
+    state = reduce(state, { type: 'SEATS_CONFIRMED' }, round.ctx);
+    state = reduce(state, { type: 'PROMPT_CHANGED', text: 'Design a settings page' }, round.ctx);
+    state = reduce(state, { type: 'PROMPT_SUBMITTED' }, round.ctx);
+    expect(stripText(state, ROSTER, Date.parse('2026-01-01T00:00:00.000Z'))).toMatch(/ClaudeBot · drafting/);
+    await orchestrator.after({ type: 'PROMPT_SUBMITTED' });
+    expect(calls).toHaveLength(0);
+    expect(state.feed.some((line) => /ClaudeBot has no API key/i.test(line.text))).toBe(true);
+    expect(state.proposals.at(-1).source).toBe('preview');
+    expect(state.proposals.at(-1).allocations.some((row) => row.seatId === 'claude')).toBe(false);
+    expect(dockSeatIds(state, ROSTER)).toContain('claude');
+
+    const live = [];
+    const liveOrchestrator = createOrchestrator({
+      getState: () => state,
+      dispatch(action) { state = reduce(state, action, round.ctx); },
+      getSecrets: () => ({ anthropic: 'sk-claude' }),
+      roster: ROSTER,
+      delay: async () => {},
+      now: () => '2026-01-01T00:00:00.000Z',
+      id: (kind) => `${kind}_live_${(n += 1)}`,
+      complete: async (request) => {
+        live.push(request);
+        return {
+          ok: true,
+          text: JSON.stringify({
+            approach: 'ClaudeBot leads the cut',
+            allocations: enabledKnights(state, ROSTER).map((seat) => ({
+              seatId: seat.id,
+              percent: 20,
+              responsibility: 'A share',
+            })),
+          }),
+        };
+      },
+    });
+    state = reduce(state, { type: 'REVISION_REQUESTED', note: 'Try Claude live' }, round.ctx);
+    await liveOrchestrator.after({ type: 'REVISION_REQUESTED' });
+    expect(live.map((request) => request.providerId)).toEqual(['anthropic']);
+    expect(live[0].apiKey).toBe('sk-claude');
+    expect(live[0].system).toMatch(/ClaudeBot/);
+    expect(state.proposals.at(-1).source).toBe('live');
+    state = reduce(state, { type: 'VOTE_CALLED' }, round.ctx);
+    await liveOrchestrator.after({ type: 'VOTE_CALLED' });
+    expect(state.feed.some((line) => line.text === 'ClaudeBot is opening the vote.')).toBe(true);
+    expect(state.phase.name).toBe('ready');
+    state = reduce(state, { type: 'IMPLEMENT' }, round.ctx);
+    await liveOrchestrator.after({ type: 'IMPLEMENT' });
+    expect(state.messages.some((message) => message.seatId === 'claude' && /Plan approved/.test(message.text))).toBe(true);
+    expect(state.messages.some((message) => message.seatId === 'claude' && /Handing off/.test(message.text))).toBe(true);
+  });
 });
 
 describe('round table accounts', () => {
