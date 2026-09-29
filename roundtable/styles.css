@@ -77,7 +77,8 @@ input, textarea {
 .name-field[hidden] { display: none; }
 
 .app { min-height: 100dvh; display: flex; flex-direction: column; }
-.app[data-focus="chat"] { height: 100dvh; overflow: hidden; }
+.app[data-focus="chat"],
+.app[data-focus="table"] { height: 100dvh; overflow: hidden; }
 .header {
   display: flex;
   justify-content: space-between;
@@ -99,10 +100,11 @@ input, textarea {
 .ghost { font-size: 12px; padding: 6px 10px; }
 
 .stage-layout { display: flex; flex-direction: column; }
-.app[data-focus="chat"] .stage-layout { flex: 1; min-height: 0; }
+.app[data-focus="chat"] .stage-layout,
+.app[data-focus="table"] .stage-layout { flex: 1; min-height: 0; }
 .app[data-focus="table"] .stage {
-  height: min(58dvh, 560px);
-  min-height: 260px;
+  flex: 1 1 54%;
+  min-height: 280px;
   position: relative;
   overflow: hidden;
   background: radial-gradient(ellipse at center, rgba(228, 179, 99, 0.09), transparent 62%);
@@ -235,7 +237,25 @@ input, textarea {
 .status-strip:empty { display: none; }
 .planning {
   width: min(720px, calc(100% - 32px));
-  margin: 8px auto 28px;
+  margin: 8px auto 16px;
+}
+.app[data-focus="table"] .planning {
+  flex: 1 1 46%;
+  min-height: 180px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.planning-scroll {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.planning-actions { flex: none; padding-top: 8px; }
+.planning-actions p { margin: 0 0 8px; }
+.planning-actions .row { justify-content: flex-start; }
+@media (max-height: 760px) {
+  .app[data-focus="table"] .stage { min-height: 220px; flex-basis: 42%; }
 }
 .card {
   border: 1px solid var(--line);
@@ -256,7 +276,8 @@ input, textarea {
 .bar span { display: block; height: 100%; }
 .revision { margin-top: 8px; }
 
-.app[data-focus="chat"] .planning { display: none; }
+.app[data-focus="chat"] .planning,
+.stage-layout[data-phase="implementing"] .planning { display: none; }
 .app[data-focus="table"] .chat-scroll,
 .app[data-focus="table"] .composer { display: none; }
 .chat-scroll {

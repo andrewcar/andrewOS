@@ -56,8 +56,8 @@ function tableHtml(state, roster) {
   const quest = state.phase.name === 'implementing';
   const center = mode === 'dock' || quest
     ? `<button type="button" class="medallion" data-action="toggle-focus" data-testid="table-center" aria-label="${mode === 'dock' ? 'Show the round table' : 'Return to chat'}">
-        <span class="medallion-kicker">${mode === 'dock' ? 'Table' : 'Chat'}</span>
-        <span class="medallion-title">Round</span>
+        <span class="medallion-kicker">${mode === 'dock' ? 'Show' : 'Return'}</span>
+        <span class="medallion-title">${mode === 'dock' ? 'Table' : 'Chat'}</span>
       </button>`
     : `<div class="medallion" data-testid="table-center"><span class="medallion-kicker">Round</span><span class="medallion-title">Table</span></div>`;
   const seatHtml = seats.map(({ seat, left, top }) => {
@@ -110,21 +110,21 @@ function panelHtml(state, roster) {
   const phase = state.phase.name;
   const count = enabledKnights(state, roster).length;
   if (phase === 'seats') {
-    return `<div class="card">
+    return `<div class="planning-scroll"><div class="card">
       <div class="card-kicker">Seats</div>
       <p>Confirm your seats, then set the job on the table. ${count} knight${count === 1 ? '' : 's'} enabled.</p>
       <button type="button" class="primary" data-action="confirm-seats" data-testid="confirm-seats" ${count < 1 ? 'disabled' : ''}>Confirm seats</button>
-    </div>`;
+    </div></div>`;
   }
   if (phase === 'prompt') {
-    return `<div class="card" data-testid="prompt-card">
+    return `<div class="planning-scroll"><div class="card" data-testid="prompt-card">
       <label class="card-kicker" for="quest-prompt">The job</label>
       <textarea id="quest-prompt" data-testid="prompt-textarea" rows="4" maxlength="8000" placeholder="Describe the job for the council…">${escapeHtml(state.prompt)}</textarea>
       <div class="row">
         <span class="muted" data-count>${state.prompt.trim().length} / 8000</span>
         <button type="button" class="primary" data-action="submit-prompt" data-testid="prompt-submit" ${state.prompt.trim() ? '' : 'disabled'}>Set the job</button>
       </div>
-    </div>`;
+    </div></div>`;
   }
   const proposal = latestProposal(state);
   const score = currentTally(state, roster);
@@ -145,15 +145,18 @@ function panelHtml(state, roster) {
     actions = `<p>The table passed the split. Approve it and the council moves into the quest chat.</p>
       <div class="row">
         <button type="button" class="primary" data-action="approve" data-testid="approve-plan">Approve plan</button>
-      </div>
-      <label class="revision">Note for a revision
-        <input data-testid="revision-note" maxlength="400" placeholder="Optional note for BotBot" />
-      </label>
-      <button type="button" class="ghost" data-action="revise">Ask for a revision</button>`;
+        <button type="button" class="ghost" data-action="revise">Ask for a revision</button>
+      </div>`;
   }
-  return `${proposalHtml(proposal, roster)}
-    ${actions}
-    <ul class="feed" data-testid="planning-feed">${feed}</ul>`;
+  const revision = phase === 'ready'
+    ? `<label class="revision">Note for a revision
+        <input data-testid="revision-note" maxlength="400" placeholder="Optional note for BotBot" />
+      </label>`
+    : '';
+  return `<div class="planning-scroll">${proposalHtml(proposal, roster)}
+    ${revision}
+    <ul class="feed" data-testid="planning-feed">${feed}</ul></div>
+    <div class="planning-actions">${actions}</div>`;
 }
 
 function messageHtml(message, roster, kingName) {
