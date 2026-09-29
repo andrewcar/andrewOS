@@ -1,0 +1,107 @@
+import { expect, test } from '@playwright/test';
+
+test.describe('round table', () => {
+  test('plans in view of the table, then docks chat at top center', async ({ page }, testInfo) => {
+    test.setTimeout(60_000);
+    await page.goto('/roundtable/');
+    await expect(page).toHaveTitle('Round Table');
+    expect(page.url()).not.toContain('relay.andrewos.com');
+
+    await page.getByLabel('Display name').fill('Ada');
+    await page.getByLabel('Email').fill(`ada-${testInfo.project.name}@example.com`);
+    await page.getByLabel('Password').fill('correct-horse');
+    await page.getByTestId('auth-form').getByRole('button', { name: 'Create account' }).click();
+
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await expect(page.getByTestId('keys-empty')).toBeVisible();
+    await expect(page.getByText('Not set').first()).toBeVisible();
+    await page.getByRole('button', { name: 'Back' }).click();
+
+    const layout = page.getByTestId('stage-layout');
+    await expect(layout).toHaveAttribute('data-focus', 'table');
+    await page.getByTestId('confirm-seats').click();
+    const prompt = page.getByTestId('prompt-card');
+    await expect(prompt).toBeVisible();
+    await expect(page.getByTestId('prompt-textarea')).toHaveAttribute('placeholder', /Describe the/);
+    const overlap = await page.evaluate(() => {
+      const table = document.querySelector('[data-testid="round-table"]').getBoundingClientRect();
+      const card = document.querySelector('[data-testid="prompt-card"]').getBoundingClientRect();
+      const width = Math.max(0, Math.min(table.right, card.right) - Math.max(table.left, card.left));
+      const height = Math.max(0, Math.min(table.bottom, card.bottom) - Math.max(table.top, card.top));
+      return width * height;
+    });
+    expect(overlap).toBe(0);
+    if (!testInfo.project.name.startsWith('mobile')) {
+      await expect(prompt).toBeInViewport();
+    }
+
+    await page.getByTestId('prompt-textarea').fill('Design a settings page for provider keys');
+    await page.getByTestId('prompt-submit').click();
+    await expect(page.getByTestId('planning-feed')).toContainText(/thinking/i);
+    await expect(page.getByTestId('proposal-card')).toBeVisible();
+    await page.getByTestId('call-vote').click();
+    await expect(page.getByTestId('planning-feed')).toContainText(/weighing/i);
+    await expect(layout).toHaveAttribute('data-phase', 'ready');
+    await page.getByTestId('approve-plan').click();
+
+    await expect(layout).toHaveAttribute('data-focus', 'chat');
+    await expect(layout).toHaveAttribute('data-phase-status', 'done');
+    const table = await page.getByTestId('round-table').boundingBox();
+    const viewport = page.viewportSize();
+    expect(table).toBeTruthy();
+    expect(Math.abs(table.x + table.width / 2 - viewport.width / 2)).toBeLessThan(16);
+    expect(table.y).toBeGreaterThan(40);
+    expect(table.y).toBeLessThan(220);
+    expect(table.x).toBeGreaterThan(24);
+
+    const scroller = page.getByTestId('chat-panel');
+    const before = await page.getByTestId('round-table').boundingBox();
+    await scroller.evaluate((element) => { element.scrollTop = 0; });
+    await scroller.evaluate((element) => { element.scrollTop = 100; });
+    const scrolled = await scroller.evaluate((element) => element.scrollTop);
+    expect(scrolled).toBeGreaterThan(20);
+    const after = await page.getByTestId('round-table').boundingBox();
+    expect(Math.abs(after.x - before.x)).toBeLessThan(1);
+    expect(Math.abs(after.y - before.y)).toBeLessThan(1);
+
+    await expect(page.locator('.bubble').first()).toBeVisible();
+    const msg = page.locator('.msg').last();
+    const reply = msg.locator('.reply-btn');
+    await msg.evaluate((element) => {
+      const scroller = element.closest('[data-testid="chat-panel"]');
+      const dock = document.querySelector('[data-testid="round-table"]')?.getBoundingClientRect();
+      const clearTop = (dock?.bottom ?? 0) + 24;
+      const top = element.getBoundingClientRect().top;
+      scroller.scrollTop += top - clearTop;
+    });
+    if (testInfo.project.name.startsWith('mobile')) {
+      await expect.poll(async () => reply.evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
+    } else {
+      await expect.poll(async () => reply.evaluate((element) => Number(getComputedStyle(element).opacity))).toBeLessThan(0.2);
+      await msg.hover();
+      await expect.poll(async () => reply.evaluate((element) => Number(getComputedStyle(element).opacity))).toBeGreaterThan(0.9);
+    }
+
+    await page.getByTestId('table-center').click();
+    await expect(layout).toHaveAttribute('data-focus', 'table');
+    await expect(page.getByTestId('seat-muse')).toBeVisible();
+    await page.getByTestId('seat-muse').click();
+    await page.getByTestId('table-center').click();
+    await expect(layout).toHaveAttribute('data-focus', 'chat');
+    await expect(page.getByTestId('seat-target-muse')).toHaveCount(0);
+    await expect(page.getByTestId('seat-target-codex')).toBeVisible();
+    await page.getByTestId('table-center').click();
+    await page.getByTestId('seat-muse').click();
+    await page.getByTestId('table-center').click();
+    await expect(page.getByTestId('seat-target-muse')).toBeVisible();
+
+    await page.getByTestId('seat-target-codex').click();
+    await expect(page.getByTestId('target-chip')).toContainText('CodexBot');
+    await msg.hover();
+    await reply.click();
+    await page.getByTestId('composer-textarea').fill('Where should we start?');
+    await page.getByTestId('composer-send').click();
+    await expect(page.getByTestId('status-strip')).toContainText(/thinking|working|Live/i);
+    await expect(page.locator('.bubble').last()).toContainText(/start|share|cut|%/i, { timeout: 15_000 });
+  });
+});

@@ -1,0 +1,184 @@
+import { describe, expect, it, vi } from 'vitest';
+import { createMemoryStorage, createVault } from '../../roundtable/js/auth.js';
+import { createOrchestrator } from '../../roundtable/js/orchestrator.js';
+import { heartbeatLine, initialStatusLine } from '../../roundtable/js/progress.js';
+import { completeLive } from '../../roundtable/js/providers.js';
+import { ROSTER } from '../../roundtable/js/roster.js';
+import { buildProposal, percentSplit } from '../../roundtable/js/split.js';
+import {
+  PROMPT_ANCHOR,
+  createState,
+  dockSeatIds,
+  enabledKnights,
+  reduce,
+} from '../../roundtable/js/state.js';
+
+function harness() {
+  let now = '2026-01-01T00:00:00.000Z';
+  let n = 0;
+  const ctx = {
+    now: () => now,
+    id: (kind) => `${kind}_${(n += 1)}`,
+    roster: ROSTER,
+  };
+  let state = createState({ now, sessionId: 'sess_1', kingName: 'Ada', roster: ROSTER });
+  return {
+    ctx,
+    get state() { return state; },
+    dispatch(action) { state = reduce(state, action, ctx); },
+  };
+}
+
+describe('round table council', () => {
+  it('keeps the prompt in the planning panel, not under the table', () => {
+    expect(PROMPT_ANCHOR).toBe('planning-panel');
+  });
+
+  it('splits a job across enabled knights', () => {
+    const proposal = buildProposal({
+      id: 'prop_1',
+      prompt: 'Design a settings page for API keys',
+      knights: enabledKnights(createState({
+        now: 't',
+        sessionId: 's',
+        kingName: 'Ada',
+        roster: ROSTER,
+      }), ROSTER),
+    });
+    const sum = proposal.allocations.reduce((total, row) => total + row.percent, 0);
+    expect(sum).toBe(100);
+    expect(proposal.allocations.filter((row) => row.percent > 0).length).toBeGreaterThan(1);
+    expect(percentSplit([
+      { seatId: 'a', weight: 1, responsibility: 'A' },
+      { seatId: 'b', weight: 1, responsibility: 'B' },
+      { seatId: 'c', weight: 1, responsibility: 'C' },
+    ]).reduce((total, row) => total + row.percent, 0)).toBe(100);
+  });
+
+  it('walks planning into chat and hides disabled seats on the dock', () => {
+    const round = harness();
+    round.dispatch({ type: 'SEAT_TOGGLED', seatId: 'muse', enabled: false });
+    round.dispatch({ type: 'SEATS_CONFIRMED' });
+    round.dispatch({ type: 'PROMPT_CHANGED', text: 'Design a settings page' });
+    round.dispatch({ type: 'PROMPT_SUBMITTED' });
+    const proposal = buildProposal({
+      id: 'prop_1',
+      revision: 1,
+      prompt: round.state.prompt,
+      knights: enabledKnights(round.state, ROSTER),
+    });
+    round.dispatch({ type: 'PROPOSAL_RECEIVED', proposal });
+    expect(round.state.focus).toBe('table');
+    round.dispatch({ type: 'FOCUS_SET', focus: 'chat' });
+    expect(round.state.focus).toBe('table');
+    round.dispatch({ type: 'VOTE_CALLED' });
+    for (const seat of enabledKnights(round.state, ROSTER)) {
+      round.dispatch({
+        type: 'VOTE_CAST',
+        vote: { kind: 'vote', seatId: seat.id, proposalId: proposal.id, choice: 'agree', reason: 'yes' },
+      });
+    }
+    round.dispatch({ type: 'VOTES_RESOLVED' });
+    expect(round.state.phase.name).toBe('ready');
+    round.dispatch({ type: 'IMPLEMENT' });
+    expect(round.state.focus).toBe('chat');
+    expect(dockSeatIds(round.state, ROSTER)).not.toContain('muse');
+    expect(dockSeatIds(round.state, ROSTER)).toContain('codex');
+    expect(dockSeatIds(round.state, ROSTER)).toContain('botbot');
+    round.dispatch({ type: 'FOCUS_SET', focus: 'table' });
+    round.dispatch({ type: 'SEAT_TOGGLED', seatId: 'muse', enabled: true, messageId: 'join_1' });
+    expect(round.state.messages.some((message) => message.text.includes('joined the quest'))).toBe(true);
+    round.dispatch({ type: 'FOCUS_SET', focus: 'chat' });
+    expect(dockSeatIds(round.state, ROSTER)).toContain('muse');
+  });
+
+  it('names a wait immediately and again if it drags on', () => {
+    expect(initialStatusLine('CodexBot', 'thinking')).toBe('CodexBot is thinking…');
+    expect(heartbeatLine('CodexBot', 'thinking', 1000)).toBeNull();
+    expect(heartbeatLine('CodexBot', 'waiting', 3000)).toMatch(/still waiting/);
+    expect(heartbeatLine('CodexBot', 'working', 12000)).toMatch(/timed out/);
+  });
+
+  it('posts a drafting status before the proposal exists', async () => {
+    const round = harness();
+    const seen = [];
+    let state = round.state;
+    const orchestrator = createOrchestrator({
+      getState: () => state,
+      dispatch(action) {
+        seen.push(action);
+        state = reduce(state, action, round.ctx);
+      },
+      getSecrets: () => ({}),
+      roster: ROSTER,
+      delay: async () => {},
+      now: () => '2026-01-01T00:00:00.000Z',
+      id: (kind) => `${kind}_${seen.length}`,
+    });
+    state = reduce(state, { type: 'SEATS_CONFIRMED' }, round.ctx);
+    state = reduce(state, { type: 'PROMPT_CHANGED', text: 'Design a settings page' }, round.ctx);
+    state = reduce(state, { type: 'PROMPT_SUBMITTED' }, round.ctx);
+    await orchestrator.after({ type: 'PROMPT_SUBMITTED' });
+    const feed = seen.find((action) => action.type === 'FEED_ADD');
+    const proposal = seen.find((action) => action.type === 'PROPOSAL_RECEIVED');
+    expect(feed.text).toMatch(/thinking/i);
+    expect(seen.indexOf(feed)).toBeLessThan(seen.indexOf(proposal));
+    expect(state.phase.status).toBe('revealed');
+  });
+});
+
+describe('round table accounts', () => {
+  it('stores provider keys as ciphertext', async () => {
+    const storage = createMemoryStorage();
+    const session = createMemoryStorage();
+    const vault = createVault({ storage, session, iterations: 1200 });
+    const created = await vault.signUp({
+      email: 'Ada@Example.com',
+      password: 'correct-horse',
+      name: 'Ada',
+    });
+    await vault.saveSecrets(created.account.id, created.aesKey, { openai: 'sk-test-secret' });
+    const dump = JSON.stringify(storage.dump());
+    expect(dump).not.toContain('sk-test-secret');
+    expect(dump).not.toContain('correct-horse');
+    const signedIn = await vault.signIn({ email: 'ada@example.com', password: 'correct-horse' });
+    expect(signedIn.secrets.openai).toBe('sk-test-secret');
+    await expect(vault.signIn({ email: 'ada@example.com', password: 'wrong-password' })).rejects.toThrow(/wrong password/i);
+  });
+});
+
+describe('provider calls', () => {
+  it('redacts keys and does not log them', async () => {
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const fetchImpl = vi.fn(async () => ({
+      ok: false,
+      status: 401,
+      text: async () => 'unauthorized sk-test-secret',
+    }));
+    const result = await completeLive({
+      providerId: 'openai',
+      apiKey: 'sk-test-secret',
+      system: 'Be brief.',
+      user: 'Hello',
+      fetchImpl,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.message).not.toContain('sk-test-secret');
+    expect(fetchImpl).toHaveBeenCalledOnce();
+    const blocked = await completeLive({
+      providerId: 'meta',
+      apiKey: 'muse-secret',
+      system: 's',
+      user: 'u',
+      fetchImpl,
+    });
+    expect(blocked.code).toBe('no-relay');
+    expect(blocked.message).not.toContain('muse-secret');
+    expect(fetchImpl).toHaveBeenCalledOnce();
+    expect(spy).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
+    spy.mockRestore();
+    errorSpy.mockRestore();
+  });
+});
