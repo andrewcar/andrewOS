@@ -180,8 +180,9 @@ input, textarea {
   padding: 0;
 }
 .medallion-title { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
-.table-layer[data-mode="dock"] .medallion-title,
+.table-layer[data-mode="dock"] .medallion-kicker,
 .table-layer[data-mode="dock"] .seat-name { display: none; }
+.table-layer[data-mode="dock"] .medallion-title { font-size: 10px; letter-spacing: 0.12em; }
 .seat {
   width: 56px; height: 56px;
   margin: 0;
