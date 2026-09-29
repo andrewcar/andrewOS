@@ -30,6 +30,7 @@ const model = {
   secrets: {},
   locked: false,
   sound: audio.enabled(),
+  sendLock: false,
   state: null,
 };
 
@@ -125,7 +126,13 @@ function dispatch(action) {
   persist();
   sounds(prev, model.state, action);
   render(Boolean(prevFocus && prevFocus !== model.state.focus));
-  orchestrator.after(action);
+  const follow = orchestrator.after(action);
+  if (action.type === 'SEND') {
+    Promise.resolve(follow).finally(() => {
+      model.sendLock = false;
+      if (model.screen === 'app') render(false);
+    });
+  }
 }
 
 const orchestrator = createOrchestrator({
@@ -274,7 +281,6 @@ model.onPrompt = (text) => dispatch({ type: 'PROMPT_CHANGED', text });
 model.onConfirm = () => dispatch({ type: 'SEATS_CONFIRMED' });
 model.onSubmitPrompt = () => dispatch({ type: 'PROMPT_SUBMITTED' });
 model.onCallVote = () => dispatch({ type: 'VOTE_CALLED' });
-model.onApprove = () => dispatch({ type: 'IMPLEMENT' });
 model.onRetry = () => dispatch({ type: 'PROPOSAL_RETRY' });
 model.onRevise = (note) => dispatch({ type: 'REVISION_REQUESTED', note });
 model.onDecree = () => dispatch({ type: 'DECREE', decision: 'proceed' });
@@ -288,9 +294,18 @@ model.onToggleSeat = (seatId) => {
   dispatch({ type: 'SEAT_TOGGLED', seatId, enabled: !seat.enabled, messageId: nid('msg') });
 };
 model.onTarget = (seatId) => dispatch({ type: 'TARGET_SET', seatId: seatId || null, replyTo: null });
+model.onApprove = () => {
+  const button = document.querySelector('[data-testid="approve-plan"]');
+  if (button) {
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    button.textContent = 'Opening chat…';
+  }
+  dispatch({ type: 'IMPLEMENT' });
+};
 model.onReply = (messageId) => {
   const message = model.state?.messages.find((row) => row.id === messageId);
-  if (!message || message.kind !== 'chat') return;
+  if (!message || message.kind !== 'chat' || message.seatId === 'king') return;
   const seat = message.seatId === 'king' ? null : seatById(message.seatId, ROSTER);
   dispatch({
     type: 'TARGET_SET',
@@ -300,10 +315,18 @@ model.onReply = (messageId) => {
   document.querySelector('[data-testid="composer-textarea"]')?.focus();
 };
 model.onSend = (text) => {
-  if (!model.state || isBusy(model.state)) return false;
+  if (model.sendLock || !model.state) return false;
+  if (model.state.phase.name !== 'implementing' || model.state.phase.kickoff === 'running' || isBusy(model.state)) {
+    return false;
+  }
+  const trimmed = String(text || '').trim();
+  if (!trimmed) return false;
+  model.sendLock = true;
   const messageId = nid('msg');
-  dispatch({ type: 'SEND', text, messageId });
-  return model.state.messages.some((message) => message.id === messageId);
+  dispatch({ type: 'SEND', text: trimmed, messageId });
+  const accepted = model.state.messages.some((message) => message.id === messageId);
+  if (!accepted) model.sendLock = false;
+  return accepted;
 };
 model.onNewTable = () => {
   if (!model.armReset) {

@@ -1,5 +1,5 @@
 import { PROVIDERS, knights, layoutSeats, markGlyph, presentRoster, seatById } from './roster.js';
-import { currentTally, dockSeatIds, enabledKnights, latestProposal, stripText } from './state.js';
+import { currentTally, dockSeatIds, enabledKnights, isBusy, latestProposal, stripText } from './state.js';
 
 export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -36,11 +36,11 @@ function panelKey(state, roster) {
   ].join('|');
 }
 
-function tableKey(state, roster) {
-  const seats = Object.entries(state.seats).map(([id, seat]) => (
-    `${id}:${seat.enabled}:${seat.status}:${seat.joinedMidQuest ? 1 : 0}`
-  )).join(',');
-  return [state.focus, state.phase.name, state.kingName, seats, dockSeatIds(state, roster).join('.')].join('|');
+function tableStructureKey(state, roster) {
+  const ids = state.focus === 'chat'
+    ? dockSeatIds(state, roster)
+    : presentRoster(roster, state.kingName).map((seat) => seat.id);
+  return [state.focus, state.phase.name, state.kingName, ids.join('.')].join('|');
 }
 
 function visibleSeats(state, roster) {
@@ -78,7 +78,8 @@ function tableHtml(state, roster) {
       data-enabled="${enabled ? 'true' : 'false'}"
       data-status="${escapeHtml(status)}"
       data-testid="${testid}"
-      ${action ? `data-action="${action}" data-seat="${seat.id}"` : ''}
+      data-seat="${seat.id}"
+      ${action ? `data-action="${action}"` : ''}
       ${tag === 'button' ? `type="button" aria-label="${escapeHtml(label)}" aria-pressed="${enabled ? 'true' : 'false'}"` : `role="img" aria-label="${escapeHtml(label)}"`}
     ><span class="seat-glyph">${escapeHtml(markGlyph(seat))}</span><span class="seat-name">${escapeHtml(seat.role === 'king' ? seat.name : seat.name.replace(/Bot$/, ''))}</span></${tag}>`;
   }).join('');
@@ -135,7 +136,7 @@ function panelHtml(state, roster) {
   } else if (phase === 'proposal' && state.phase.status === 'error') {
     actions = `<p class="warn">${escapeHtml(state.phase.error || 'Drafting failed.')}</p><button type="button" class="primary" data-action="retry-proposal">Retry</button>`;
   } else if (phase === 'proposal' && state.phase.status === 'drafting') {
-    actions = `<p class="muted">BotBot is drafting the split. Progress stays in the log below.</p>`;
+    actions = `<p class="muted">BotBot is drafting the split.</p>`;
   } else if (phase === 'voting') {
     actions = `<p data-testid="tally">${score.pending ? `${score.agree + score.disagree} of ${score.agree + score.disagree + score.pending + score.failed} votes in` : `${score.agree} agree · ${score.disagree} disagree`}${state.phase.stalled ? ' · divided' : ''}</p>`;
     if (state.phase.stalled) {
@@ -153,9 +154,9 @@ function panelHtml(state, roster) {
         <input data-testid="revision-note" maxlength="400" placeholder="Optional note for BotBot" />
       </label>`
     : '';
-  return `<div class="planning-scroll">${proposalHtml(proposal, roster)}
-    ${revision}
-    <ul class="feed" data-testid="planning-feed">${feed}</ul></div>
+  return `<div class="planning-scroll"><ul class="feed" data-testid="planning-feed">${feed}</ul>
+    ${proposalHtml(proposal, roster)}
+    ${revision}</div>
     <div class="planning-actions">${actions}</div>`;
 }
 
@@ -175,7 +176,7 @@ function messageHtml(message, roster, kingName) {
       <span class="seat-icon" aria-hidden="true">${escapeHtml(message.seatId === 'king' ? (kingName || 'Y').slice(0, 1).toUpperCase() : markGlyph(seat || { mark: { kind: 'initials', text: '?' } }))}</span>
       ${quote}
       <div class="msg-body"></div>
-      <button type="button" class="reply-btn" data-action="reply" data-reply="${escapeHtml(message.id)}">Reply</button>
+      ${message.seatId === 'king' ? '' : `<button type="button" class="reply-btn" data-action="reply" data-reply="${escapeHtml(message.id)}">Reply</button>`}
     </div>
   </article>`;
 }
@@ -194,28 +195,70 @@ function fillBody(node, message) {
   }
 }
 
-function syncMessages(inner, state, roster) {
+function seatControlLabel(seat, state, enabled) {
+  if (!seat) return '';
+  if (state.focus === 'chat' && seat.role !== 'king') return `Talk to ${seat.name}`;
+  if (seat.role === 'knight') return `${enabled ? 'Disable' : 'Enable'} ${seat.name}`;
+  return seat.name;
+}
+
+function paintTable(slot, state, roster) {
+  const key = tableStructureKey(state, roster);
+  if (slot.dataset.key !== key) {
+    slot.dataset.key = key;
+    slot.innerHTML = tableHtml(state, roster);
+  }
+  slot.querySelectorAll('[data-seat]').forEach((node) => {
+    const seat = seatById(node.dataset.seat, roster);
+    const seatState = state.seats[node.dataset.seat];
+    const enabled = seat?.role === 'king' ? true : seatState?.enabled !== false;
+    node.dataset.enabled = enabled ? 'true' : 'false';
+    node.dataset.status = seatState?.status || 'idle';
+    if (node.tagName !== 'BUTTON') return;
+    node.setAttribute('aria-label', seatControlLabel(seat, state, enabled));
+    node.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+  });
+}
+
+function syncMessages(inner, state, roster, preserveScroll) {
   const messages = state.messages;
-  const existing = [...inner.querySelectorAll('[data-message-id]')];
-  const same = existing.length === messages.length
-    && existing.every((node, index) => node.dataset.messageId === messages[index].id);
   const scroller = inner.parentElement;
   if (scroller && !scroller.dataset.bound) {
     scroller.dataset.bound = '1';
     scroller.dataset.pinned = '1';
     scroller.addEventListener('scroll', () => {
+      if (scroller.dataset.suspended === '1') return;
       const distance = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight;
       scroller.dataset.pinned = distance < 96 ? '1' : '0';
     }, { passive: true });
   }
   const pinned = !scroller || scroller.dataset.pinned !== '0';
-  if (!same) {
-    inner.innerHTML = messages.map((message) => messageHtml(message, roster, state.kingName)).join('');
-    [...inner.querySelectorAll('[data-message-id]')].forEach((node, index) => fillBody(node, messages[index]));
-  } else {
-    messages.forEach((message, index) => fillBody(existing[index], message));
+  const existing = new Map([...inner.querySelectorAll('[data-message-id]')].map((node) => [node.dataset.messageId, node]));
+  const live = new Set(messages.map((message) => message.id));
+  for (const [id, node] of existing) {
+    if (!live.has(id)) node.remove();
   }
-  if (pinned && scroller) scroller.scrollTop = scroller.scrollHeight;
+  let cursor = inner.firstElementChild;
+  messages.forEach((message) => {
+    let node = existing.get(message.id);
+    if (!node || !node.isConnected) {
+      const holder = document.createElement('template');
+      holder.innerHTML = messageHtml(message, roster, state.kingName);
+      node = holder.content.firstElementChild;
+      inner.insertBefore(node, cursor);
+    } else if (node !== cursor) {
+      inner.insertBefore(node, cursor);
+    }
+    if (message.kind === 'status') {
+      if (node.textContent !== message.text) node.textContent = message.text;
+    } else {
+      fillBody(node, message);
+    }
+    cursor = node.nextElementSibling;
+  });
+  if (!preserveScroll && pinned && scroller && scroller.dataset.suspended !== '1') {
+    scroller.scrollTop = scroller.scrollHeight;
+  }
 }
 
 function secretsEmpty(secrets) {
@@ -423,11 +466,20 @@ function mountApp(root, model, roster) {
     event.preventDefault();
     model.onUnlock(new FormData(event.currentTarget).get('password'));
   });
-  root.querySelector('[data-testid="composer"]').addEventListener('submit', (event) => {
+  const composer = root.querySelector('[data-testid="composer"]');
+  const composerText = composer.querySelector('textarea');
+  const submitComposer = () => {
+    const accepted = model.onSend(composerText.value);
+    if (accepted) composerText.value = '';
+  };
+  composer.addEventListener('submit', (event) => {
     event.preventDefault();
-    const textarea = event.currentTarget.querySelector('textarea');
-    const accepted = model.onSend(textarea.value);
-    if (accepted) textarea.value = '';
+    submitComposer();
+  });
+  composerText.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
+    event.preventDefault();
+    submitComposer();
   });
   updateApp(root, model, roster);
 }
@@ -436,6 +488,13 @@ function updateApp(root, model, roster) {
   const state = model.state;
   const app = root.querySelector('.app');
   if (!app || !state) return;
+  const scroller = root.querySelector('.chat-scroll');
+  const leavingChat = app.dataset.focus === 'chat' && state.focus !== 'chat';
+  const returningChat = app.dataset.focus !== 'chat' && state.focus === 'chat' && scroller?.dataset.savedScroll != null;
+  if (leavingChat && scroller) {
+    scroller.dataset.savedScroll = String(scroller.scrollTop);
+    scroller.dataset.suspended = '1';
+  }
   app.dataset.focus = state.focus;
   const layout = root.querySelector('[data-testid="stage-layout"]');
   layout.dataset.focus = state.focus;
@@ -446,19 +505,19 @@ function updateApp(root, model, roster) {
   const chip = root.querySelector('[data-testid="mode-chip"]');
   if (chip) chip.textContent = modeLabel(model.secrets, state, roster);
   const sound = root.querySelector('[data-testid="sound-toggle"]');
-  if (sound) sound.textContent = model.sound ? 'Sound on' : 'Sound off';
+  if (sound) {
+    const label = model.sound ? 'Sound on' : 'Sound off';
+    sound.textContent = label;
+    sound.setAttribute('aria-label', label);
+    sound.setAttribute('aria-pressed', model.sound ? 'true' : 'false');
+  }
   const reset = root.querySelector('[data-testid="new-table"]');
   if (reset) reset.textContent = model.armReset ? 'Confirm reset' : 'New table';
   const unlock = root.querySelector('[data-testid="unlock-form"]');
   if (unlock) unlock.hidden = !model.locked;
   const unlockError = root.querySelector('[data-unlock-error]');
   if (unlockError) unlockError.textContent = model.unlockError || '';
-  const slot = root.querySelector('.table-slot');
-  const nextTable = tableKey(state, roster);
-  if (slot.dataset.key !== nextTable) {
-    slot.dataset.key = nextTable;
-    slot.innerHTML = tableHtml(state, roster);
-  }
+  paintTable(root.querySelector('.table-slot'), state, roster);
   const planning = root.querySelector('.planning');
   const nextPanel = panelKey(state, roster);
   if (planning.dataset.key !== nextPanel) {
@@ -479,7 +538,16 @@ function updateApp(root, model, roster) {
     const count = planning.querySelector('[data-count]');
     if (count) count.textContent = `${state.prompt.trim().length} / 8000`;
   }
-  syncMessages(root.querySelector('.chat-inner'), state, roster);
+  syncMessages(root.querySelector('.chat-inner'), state, roster, Boolean(returningChat));
+  if (returningChat && scroller) {
+    void scroller.offsetHeight;
+    scroller.scrollTop = scroller.dataset.pinned === '0'
+      ? Number(scroller.dataset.savedScroll)
+      : scroller.scrollHeight;
+    const distance = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight;
+    scroller.dataset.pinned = distance < 96 ? '1' : '0';
+  }
+  if (scroller && state.focus === 'chat') scroller.dataset.suspended = '0';
   paintStrip(root, state, roster);
   const chipTarget = root.querySelector('[data-testid="target-chip"]');
   const target = state.targetSeatId ? seatById(state.targetSeatId, roster) : null;
@@ -492,6 +560,10 @@ function updateApp(root, model, roster) {
     textarea.placeholder = `${quoted}…`;
   }
   const send = root.querySelector('[data-testid="composer-send"]');
-  if (send) send.disabled = false;
+  const busy = Boolean(model.sendLock) || state.phase.kickoff === 'running' || isBusy(state);
+  if (send) {
+    send.disabled = busy;
+    send.textContent = model.sendLock ? 'Sending…' : 'Send';
+  }
   void knights;
 }

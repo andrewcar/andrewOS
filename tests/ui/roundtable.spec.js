@@ -16,6 +16,10 @@ test.describe('round table', () => {
     await expect(page.getByTestId('keys-empty')).toBeVisible();
     await expect(page.getByText('Not set').first()).toBeVisible();
     await page.getByRole('button', { name: 'Back' }).click();
+    await page.getByTestId('sound-toggle').click();
+    await expect(page.getByTestId('sound-toggle')).toHaveAttribute('aria-label', 'Sound off');
+    await page.getByTestId('sound-toggle').click();
+    await expect(page.getByTestId('sound-toggle')).toHaveAttribute('aria-label', 'Sound on');
 
     const layout = page.getByTestId('stage-layout');
     await expect(layout).toHaveAttribute('data-focus', 'table');
@@ -38,11 +42,16 @@ test.describe('round table', () => {
     await page.getByTestId('prompt-textarea').fill('Design a settings page for provider keys');
     await page.getByTestId('prompt-submit').click();
     await expect(page.getByTestId('planning-feed')).toContainText(/thinking/i);
+    await expect(page.getByTestId('proposal-card')).toHaveCount(0);
     await expect(page.getByTestId('proposal-card')).toBeVisible();
+    await expect(page.getByTestId('planning-feed')).not.toContainText(/thinking/i);
     await page.getByTestId('call-vote').click();
     await expect(page.getByTestId('planning-feed')).toContainText(/weighing/i);
     await expect(layout).toHaveAttribute('data-phase', 'ready');
-    await page.getByTestId('approve-plan').click();
+    await expect(page.getByTestId('planning-feed')).not.toContainText(/weighing|thinking/i);
+    const approve = page.getByTestId('approve-plan');
+    await approve.click();
+    await expect(layout).toHaveAttribute('data-focus', 'chat');
 
     await expect(layout).toHaveAttribute('data-focus', 'chat');
     await expect(layout).toHaveAttribute('data-phase-status', 'done');
@@ -82,11 +91,15 @@ test.describe('round table', () => {
       await expect.poll(async () => reply.evaluate((element) => Number(getComputedStyle(element).opacity))).toBeGreaterThan(0.9);
     }
 
+    const heldScroll = await scroller.evaluate((element) => element.scrollTop);
     await page.getByTestId('table-center').click();
     await expect(layout).toHaveAttribute('data-focus', 'table');
     await expect(page.getByTestId('seat-muse')).toBeVisible();
-    await page.getByTestId('seat-muse').click();
+    const muse = page.getByTestId('seat-muse');
+    await muse.click();
+    await expect(muse).toHaveAttribute('aria-label', /Enable Muse/);
     await page.getByTestId('table-center').click();
+    await expect.poll(async () => scroller.evaluate((element) => element.scrollTop)).toBeGreaterThan(heldScroll - 2);
     await expect(layout).toHaveAttribute('data-focus', 'chat');
     await expect(page.getByTestId('seat-target-muse')).toHaveCount(0);
     await expect(page.getByTestId('seat-target-codex')).toBeVisible();
@@ -99,9 +112,15 @@ test.describe('round table', () => {
     await expect(page.getByTestId('target-chip')).toContainText('CodexBot');
     await msg.hover();
     await reply.click();
-    await page.getByTestId('composer-textarea').fill('Where should we start?');
-    await page.getByTestId('composer-send').click();
-    await expect(page.getByTestId('status-strip')).toContainText(/thinking|working|Live/i);
+    const composer = page.getByTestId('composer-textarea');
+    await composer.fill('keep');
+    await composer.press('Shift+Enter');
+    await expect(composer).toHaveValue('keep\n');
+    await composer.fill('Where should we start?');
+    await composer.press('Enter');
+    await expect(composer).toHaveValue('');
+    await expect(page.locator('.bubble', { hasText: 'Where should we start?' })).toHaveCount(1);
+    await expect(page.getByTestId('status-strip')).toContainText(/thinking|working|handoff|Opening|Live/i);
     await expect(page.locator('.bubble').last()).toContainText(/start|share|cut|%/i, { timeout: 15_000 });
   });
 });

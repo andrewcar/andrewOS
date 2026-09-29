@@ -11,6 +11,7 @@ import {
   dockSeatIds,
   enabledKnights,
   reduce,
+  stripText,
 } from '../../roundtable/js/state.js';
 
 function harness() {
@@ -124,6 +125,52 @@ describe('round table council', () => {
     expect(feed.text).toMatch(/thinking/i);
     expect(seen.indexOf(feed)).toBeLessThan(seen.indexOf(proposal));
     expect(state.phase.status).toBe('revealed');
+    expect(state.feed.some((line) => /thinking/i.test(line.text))).toBe(false);
+  });
+
+  it('clears weighing lines when the vote lands and sends one message', () => {
+    const round = harness();
+    round.dispatch({ type: 'SEATS_CONFIRMED' });
+    round.dispatch({ type: 'PROMPT_CHANGED', text: 'Design a settings page' });
+    round.dispatch({ type: 'PROMPT_SUBMITTED' });
+    const proposal = buildProposal({
+      id: 'prop_1',
+      revision: 1,
+      prompt: round.state.prompt,
+      knights: enabledKnights(round.state, ROSTER),
+    });
+    round.dispatch({ type: 'FEED_ADD', id: 'feed_think', text: 'BotBot is thinking…', ephemeral: true });
+    round.dispatch({ type: 'PROPOSAL_RECEIVED', proposal });
+    expect(round.state.feed.some((line) => /thinking/i.test(line.text))).toBe(false);
+    round.dispatch({ type: 'VOTE_CALLED' });
+    round.dispatch({ type: 'FEED_ADD', id: 'feed_vote', text: 'CodexBot is weighing the split…', ephemeral: true });
+    for (const seat of enabledKnights(round.state, ROSTER)) {
+      round.dispatch({
+        type: 'VOTE_CAST',
+        vote: { kind: 'vote', seatId: seat.id, proposalId: proposal.id, choice: 'agree', reason: 'yes' },
+      });
+    }
+    round.dispatch({ type: 'VOTES_RESOLVED' });
+    expect(round.state.phase.name).toBe('ready');
+    expect(round.state.feed.some((line) => /weighing/i.test(line.text))).toBe(false);
+    round.dispatch({ type: 'IMPLEMENT' });
+    expect(stripText(round.state, ROSTER, Date.parse('2026-01-01T00:00:00.000Z'))).toMatch(/Opening the quest/);
+    round.dispatch({ type: 'KICKOFF_DONE' });
+    round.dispatch({
+      type: 'MESSAGE_APPENDED',
+      message: { id: 'status_1', seatId: 'codex', kind: 'status', text: 'CodexBot is thinking…', ephemeral: true, status: 'done' },
+    });
+    round.dispatch({
+      type: 'MESSAGE_APPENDED',
+      message: { id: 'chat_1', seatId: 'codex', kind: 'chat', text: 'Start with the empty state.', status: 'done' },
+    });
+    expect(round.state.messages.some((message) => message.id === 'status_1')).toBe(false);
+    round.dispatch({ type: 'SEND', text: '  Hello there  ', messageId: 'king_1' });
+    round.dispatch({ type: 'SET_SEAT_STATUS', seatId: 'codex', status: 'thinking', now: '2026-01-01T00:00:01.000Z' });
+    round.dispatch({ type: 'SEND', text: 'Second', messageId: 'king_2' });
+    const king = round.state.messages.filter((message) => message.seatId === 'king');
+    expect(king).toHaveLength(1);
+    expect(king[0].text).toBe('Hello there');
   });
 });
 

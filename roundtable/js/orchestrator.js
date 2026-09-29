@@ -67,10 +67,10 @@ export function createOrchestrator({
     generation += 1;
   }
 
-  async function speakStatus(token, seat, line, channel) {
+  async function speakStatus(token, seat, line, channel, ephemeral = false) {
     if (!alive(token) || !line) return;
     if (channel === 'feed') {
-      dispatch({ type: 'FEED_ADD', id: id('feed'), text: line });
+      dispatch({ type: 'FEED_ADD', id: id('feed'), text: line, ephemeral });
       return;
     }
     dispatch({
@@ -81,6 +81,7 @@ export function createOrchestrator({
         kind: 'status',
         text: line,
         status: 'done',
+        ephemeral,
         createdAt: now(),
       },
     });
@@ -100,7 +101,7 @@ export function createOrchestrator({
       const line = heartbeatLine(seat.name, status, elapsed);
       if (line && !seen.has(line)) {
         seen.add(line);
-        speakStatus(token, seat, line, channel);
+        speakStatus(token, seat, line, channel, true);
       }
     }, 1000);
     return () => clearInterval(timer);
@@ -110,7 +111,7 @@ export function createOrchestrator({
     const state = getState();
     const bot = seatById('botbot', roster);
     dispatch({ type: 'SET_SEAT_STATUS', seatId: 'botbot', status: 'thinking', now: now() });
-    await speakStatus(token, bot, initialStatusLine(bot.name, 'thinking'), 'feed');
+    await speakStatus(token, bot, initialStatusLine(bot.name, 'thinking'), 'feed', true);
     const knightsOn = enabledKnights(state, roster);
     let proposal = null;
     const secret = getSecrets().arbiter;
@@ -169,7 +170,7 @@ export function createOrchestrator({
         dispatch({ type: 'SET_SEAT_STATUS', seatId: waiting.id, status: 'waiting', now: now() });
       });
       dispatch({ type: 'SET_SEAT_STATUS', seatId: seat.id, status: 'thinking', now: now() });
-      await speakStatus(token, seat, initialStatusLine(seat.name, 'weighing the split'), 'feed');
+      await speakStatus(token, seat, initialStatusLine(seat.name, 'weighing the split'), 'feed', true);
       await delay(200);
       if (!alive(token)) return;
       const share = proposal.allocations.find((row) => row.seatId === seat.id);
@@ -269,7 +270,7 @@ export function createOrchestrator({
     const seat = seatById(seatId, roster);
     if (!seat) return;
     dispatch({ type: 'SET_SEAT_STATUS', seatId: seat.id, status: 'thinking', now: now() });
-    await speakStatus(token, seat, initialStatusLine(seat.name, 'thinking'), 'chat');
+    await speakStatus(token, seat, initialStatusLine(seat.name, 'thinking'), 'chat', true);
     const secret = getSecrets()[seat.providerId];
     const allocation = proposal?.allocations.find((row) => row.seatId === seat.id);
     if (secret) {
@@ -286,7 +287,7 @@ export function createOrchestrator({
         result = { ok: false, code: 'network', message: 'The provider call failed.' };
       }
       if (alive(token) && !result.ok && result.code === 'timeout') {
-        await speakStatus(token, seat, `${seat.name} timed out. Retrying once.`, 'chat');
+        await speakStatus(token, seat, `${seat.name} timed out. Retrying once.`, 'chat', true);
         result = await complete({
           providerId: seat.providerId,
           apiKey: secret,

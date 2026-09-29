@@ -91,19 +91,32 @@ export function isBusy(state) {
   ));
 }
 
-export function stripText(state, roster, now) {
-  const active = Object.values(state.seats).filter((seat) => (
+function seatActivity(state, roster, now) {
+  return Object.values(state.seats).filter((seat) => (
     seat.status && seat.status !== 'idle' && seat.status !== 'done'
-  ));
-  if (!active.length) {
-    if (state.phase.name === 'implementing') return 'Live · the council is listening';
-    return '';
-  }
-  return active.map((seat) => {
+  )).map((seat) => {
     const name = seatById(seat.id, roster)?.name || seat.id;
     const elapsed = seat.since ? Math.max(0, Math.round((now - Date.parse(seat.since)) / 1000)) : 0;
     return elapsed >= 2 ? `${name} · ${seat.status} · ${elapsed}s` : `${name} · ${seat.status}`;
   }).join('   ');
+}
+
+export function stripText(state, roster, now) {
+  const active = seatActivity(state, roster, now);
+  if (state.phase.name === 'implementing' && state.phase.kickoff === 'running') {
+    if (active) return active;
+    const last = [...state.messages].reverse().find((message) => message.kind === 'status');
+    return last?.text || 'Opening the quest…';
+  }
+  if (active) return active;
+  if (state.phase.name === 'proposal' && state.phase.status === 'drafting') return 'BotBot · drafting';
+  if (state.phase.name === 'voting') return 'The council is weighing the split…';
+  if (state.phase.name === 'implementing') return 'Live · the council is listening';
+  return '';
+}
+
+function dropEphemeralFeed(feed) {
+  return (feed || []).filter((line) => !line.ephemeral);
 }
 
 function touch(state, now, patch) {
@@ -170,11 +183,15 @@ export function reduce(state, action, ctx) {
       return touch(state, now, {
         proposals: [...state.proposals, action.proposal],
         phase: { name: 'proposal', status: 'revealed', revision: action.proposal.revision },
+        feed: dropEphemeralFeed(state.feed),
       });
     }
     case 'PROPOSAL_FAILED': {
       if (state.phase.name !== 'proposal' || state.phase.status !== 'drafting') return state;
-      return touch(state, now, { phase: { ...state.phase, status: 'error', error: action.error } });
+      return touch(state, now, {
+        phase: { ...state.phase, status: 'error', error: action.error },
+        feed: dropEphemeralFeed(state.feed),
+      });
     }
     case 'PROPOSAL_RETRY': {
       if (state.phase.name !== 'proposal' || state.phase.status !== 'error') return state;
@@ -229,16 +246,25 @@ export function reduce(state, action, ctx) {
       const ids = enabledKnights(state, ctx.roster).map((seat) => seat.id);
       const result = tally(state.votes[proposal.id] || [], ids);
       if (result.pending > 0) return state;
-      if (result.outcome === 'passed') return touch(state, now, { phase: { name: 'ready', via: 'vote' } });
+      if (result.outcome === 'passed') {
+        return touch(state, now, {
+          phase: { name: 'ready', via: 'vote' },
+          feed: dropEphemeralFeed(state.feed),
+        });
+      }
       if (proposal.revision < 3) {
         return touch(state, now, {
           proposals: state.proposals.map((row) => (
             row.id === proposal.id ? { ...row, superseded: true } : row
           )),
           phase: { name: 'proposal', status: 'drafting', revision: proposal.revision + 1, note: '' },
+          feed: dropEphemeralFeed(state.feed),
         });
       }
-      return touch(state, now, { phase: { name: 'voting', stalled: true } });
+      return touch(state, now, {
+        phase: { name: 'voting', stalled: true },
+        feed: dropEphemeralFeed(state.feed),
+      });
     }
     case 'DECREE': {
       if (state.phase.name !== 'voting' || !state.phase.stalled) return state;
@@ -289,8 +315,13 @@ export function reduce(state, action, ctx) {
         }],
       });
     }
-    case 'MESSAGE_APPENDED':
-      return touch(state, now, { messages: [...state.messages, action.message] });
+    case 'MESSAGE_APPENDED': {
+      const incoming = action.message;
+      const messages = incoming?.kind === 'chat'
+        ? state.messages.filter((row) => !(row.ephemeral && row.seatId === incoming.seatId))
+        : state.messages;
+      return touch(state, now, { messages: [...messages, incoming] });
+    }
     case 'MESSAGE_PATCHED': {
       let changed = false;
       const messages = state.messages.map((message) => {
@@ -302,7 +333,12 @@ export function reduce(state, action, ctx) {
       return touch(state, now, { messages });
     }
     case 'FEED_ADD': {
-      const feed = [...state.feed, { id: action.id, text: action.text, at: now }].slice(-40);
+      const feed = [...state.feed, {
+        id: action.id,
+        text: action.text,
+        at: now,
+        ephemeral: Boolean(action.ephemeral),
+      }].slice(-40);
       return touch(state, now, { feed });
     }
     case 'SET_SEAT_STATUS': {
