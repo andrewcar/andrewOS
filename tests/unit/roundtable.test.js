@@ -179,7 +179,8 @@ describe('round table council', () => {
     round.dispatch({ type: 'ARBITER_SET', seatId: 'claude' });
     expect(round.state.arbiterId).toBe('claude');
     expect(enabledKnights(round.state, ROSTER).map((seat) => seat.id)).not.toContain('claude');
-    expect(enabledKnights(round.state, ROSTER).map((seat) => seat.id)).toContain('botbot');
+    expect(enabledKnights(round.state, ROSTER).map((seat) => seat.id)).not.toContain('botbot');
+    expect(enabledKnights(round.state, ROSTER).map((seat) => seat.id)).toContain('codex');
     round.dispatch({ type: 'SEAT_TOGGLED', seatId: 'claude', enabled: false });
     expect(round.state.seats.claude.enabled).toBe(true);
     round.ctx.arbiterId = 'claude';
@@ -211,8 +212,9 @@ describe('round table council', () => {
     expect(calls).toHaveLength(0);
     expect(state.feed.some((line) => /ClaudeBot has no API key/i.test(line.text))).toBe(true);
     expect(state.proposals.at(-1).source).toBe('preview');
-    expect(state.proposals.at(-1).allocations.some((row) => row.seatId === 'claude')).toBe(false);
+    expect(state.proposals.at(-1).allocations.some((row) => row.seatId === 'claude' || row.seatId === 'botbot')).toBe(false);
     expect(dockSeatIds(state, ROSTER)).toContain('claude');
+    expect(dockSeatIds(state, ROSTER)).not.toContain('botbot');
 
     const live = [];
     const liveOrchestrator = createOrchestrator({
@@ -229,9 +231,9 @@ describe('round table council', () => {
           ok: true,
           text: JSON.stringify({
             approach: 'ClaudeBot leads the cut',
-            allocations: enabledKnights(state, ROSTER).map((seat) => ({
+            allocations: enabledKnights(state, ROSTER).map((seat, index, seats) => ({
               seatId: seat.id,
-              percent: 20,
+              percent: Math.floor(100 / seats.length) + (index < 100 % seats.length ? 1 : 0),
               responsibility: 'A share',
             })),
           }),
@@ -250,8 +252,43 @@ describe('round table council', () => {
     expect(state.phase.name).toBe('ready');
     state = reduce(state, { type: 'IMPLEMENT' }, round.ctx);
     await liveOrchestrator.after({ type: 'IMPLEMENT' });
-    expect(state.messages.some((message) => message.seatId === 'claude' && /Plan approved/.test(message.text))).toBe(true);
-    expect(state.messages.some((message) => message.seatId === 'claude' && /Handing off/.test(message.text))).toBe(true);
+    const kickoff = state.messages.map((message) => message.text).join('\n');
+    expect(state.messages.some((message) => message.seatId === 'claude' && /ClaudeBot: Plan approved/.test(message.text))).toBe(true);
+    expect(kickoff).toMatch(/ClaudeBot is handing off to/);
+    expect(kickoff).not.toMatch(/BotBot/);
+    state = reduce(state, { type: 'SEND', text: 'Where do we start?', messageId: 'ask_1' }, round.ctx);
+    await liveOrchestrator.after({ type: 'SEND', messageId: 'ask_1' });
+    const transcript = state.messages.map((message) => message.text).join('\n');
+    expect(transcript).toMatch(/ClaudeBot is handing this to/);
+    expect(transcript).not.toMatch(/BotBot/);
+    expect(live.every((request) => request.providerId === 'anthropic' && request.apiKey === 'sk-claude')).toBe(true);
+  });
+
+  it('lets BotBot lead chat when BotBot is the arbiter', async () => {
+    const round = harness();
+    let state = round.state;
+    let n = 0;
+    const orchestrator = createOrchestrator({
+      getState: () => state,
+      dispatch(action) { state = reduce(state, action, round.ctx); },
+      getSecrets: () => ({}),
+      roster: ROSTER,
+      delay: async () => {},
+      now: () => '2026-01-01T00:00:00.000Z',
+      id: (kind) => `${kind}_${(n += 1)}`,
+    });
+    state = reduce(state, { type: 'SEATS_CONFIRMED' }, round.ctx);
+    state = reduce(state, { type: 'PROMPT_CHANGED', text: 'Design a settings page' }, round.ctx);
+    state = reduce(state, { type: 'PROMPT_SUBMITTED' }, round.ctx);
+    await orchestrator.after({ type: 'PROMPT_SUBMITTED' });
+    state = reduce(state, { type: 'VOTE_CALLED' }, round.ctx);
+    await orchestrator.after({ type: 'VOTE_CALLED' });
+    state = reduce(state, { type: 'IMPLEMENT' }, round.ctx);
+    await orchestrator.after({ type: 'IMPLEMENT' });
+    const transcript = state.messages.map((message) => message.text).join('\n');
+    expect(transcript).toMatch(/BotBot: Plan approved/);
+    expect(transcript).toMatch(/BotBot is handing off to CodexBot/);
+    expect(state.messages.some((message) => message.seatId === 'botbot' && /Plan approved/.test(message.text))).toBe(true);
   });
 });
 

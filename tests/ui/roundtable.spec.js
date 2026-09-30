@@ -156,6 +156,12 @@ test.describe('round table', () => {
 
     await page.reload();
     await expect(page.getByTestId('proposal-card')).toContainText(/ClaudeBot/);
+    await page.getByTestId('call-vote').click();
+    await page.getByTestId('approve-plan').click();
+    const chat = page.getByTestId('chat-panel');
+    await expect(chat).toContainText(/ClaudeBot: Plan approved/);
+    await expect(chat).toContainText(/ClaudeBot is handing off to/);
+    await expect(chat).not.toContainText(/BotBot/);
     expect(page.url()).not.toContain('relay.andrewos.com');
   });
 });

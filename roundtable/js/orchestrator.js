@@ -9,7 +9,7 @@ export function previewReply(seat, prompt, question, allocation, asArbiter = fal
     ? `${allocation.percent}% · ${allocation.responsibility}`
     : 'a supporting pass';
   const clip = String(question || prompt || '').trim().slice(0, 160);
-  if (asArbiter || seat.role === 'arbiter') {
+  if (asArbiter) {
     return `The split stands. ${clip ? `On “${clip}”, the lead seat should take the first cut.` : 'Ask a seat if you want that voice alone.'}`;
   }
   return `${share}. ${clip ? `For “${clip}”, ` : ''}I'd ship a first cut and name the risk before the next handoff.`;
@@ -216,7 +216,7 @@ export function createOrchestrator({
         id: id('msg'),
         seatId: bot.id,
         kind: 'chat',
-        text: `Plan approved. ${proposal?.approach || 'The table is open.'}`,
+        text: `${bot.name}: Plan approved. ${proposal?.approach || 'The table is open.'}`,
         status: 'done',
         createdAt: now(),
       },
@@ -227,7 +227,7 @@ export function createOrchestrator({
       const seat = seatById(share.seatId, roster);
       if (!seat) continue;
       dispatch({ type: 'SET_SEAT_STATUS', seatId: seat.id, status: 'working', now: now() });
-      await speakStatus(token, bot, `Handing off to ${seat.name}…`, 'chat');
+      await speakStatus(token, bot, `${bot.name} is handing off to ${seat.name}…`, 'chat');
       await delay(140);
       if (!alive(token)) return;
       dispatch({
@@ -282,7 +282,7 @@ export function createOrchestrator({
       seatId = lead?.seatId || arbiter.id;
       const leadSeat = seatById(seatId, roster);
       if (seatId !== arbiter.id) {
-        await speakStatus(token, arbiter, `Handing this to ${leadSeat?.name || 'the table'}…`, 'chat');
+        await speakStatus(token, arbiter, `${arbiter.name} is handing this to ${leadSeat?.name || 'the table'}…`, 'chat');
       }
     }
     const seat = seatById(seatId, roster);

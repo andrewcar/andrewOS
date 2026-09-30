@@ -51,11 +51,14 @@ export function createState({ now, sessionId, kingName, roster, arbiterId }) {
   };
 }
 
-/** Workers on the split. The active arbiter orchestrates and does not take a share. */
+/**
+ * Knights who take a share. The chosen arbiter stays at 0% and leads chat.
+ * BotBot is not given a share when another seat is arbiter.
+ */
 export function enabledKnights(state, roster) {
   const arbiterId = resolveArbiter(state, roster)?.id;
   return roster
-    .filter((seat) => seat.role !== 'king' && seat.id !== arbiterId && state.seats[seat.id]?.enabled)
+    .filter((seat) => seat.role === 'knight' && seat.id !== arbiterId && state.seats[seat.id]?.enabled)
     .sort((a, b) => a.order - b.order);
 }
 
