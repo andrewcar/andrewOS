@@ -1,0 +1,383 @@
+import { buildProposal } from './split.js';
+import { seatById } from './roster.js';
+import { blockedLine, heartbeatLine, initialStatusLine } from './progress.js';
+import { enabledKnights, latestProposal, resolveArbiter } from './state.js';
+import { completeLive } from './providers.js';
+
+export function previewReply(seat, prompt, question, allocation, asArbiter = false) {
+  const share = allocation
+    ? `${allocation.percent}% · ${allocation.responsibility}`
+    : 'a supporting pass';
+  const clip = String(question || prompt || '').trim().slice(0, 160);
+  if (asArbiter) {
+    return `The split stands. ${clip ? `On “${clip}”, the lead seat should take the first cut.` : 'Ask a seat if you want that voice alone.'}`;
+  }
+  return `${share}. ${clip ? `For “${clip}”, ` : ''}I'd ship a first cut and name the risk before the next handoff.`;
+}
+
+function parseLiveProposal(text, { id, revision, knightsOn }) {
+  const match = String(text || '').match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  let json;
+  try { json = JSON.parse(match[0]); } catch { return null; }
+  if (!Array.isArray(json.allocations)) return null;
+  const allowed = new Set(knightsOn.map((seat) => seat.id));
+  const allocations = json.allocations
+    .filter((row) => allowed.has(row.seatId))
+    .map((row) => ({
+      seatId: row.seatId,
+      percent: Math.max(0, Math.round(Number(row.percent) || 0)),
+      responsibility: String(row.responsibility || 'Review & integration').slice(0, 80),
+    }));
+  const sum = allocations.reduce((total, row) => total + row.percent, 0);
+  if (!allocations.length || sum < 90 || sum > 110) return null;
+  return {
+    id,
+    revision,
+    pattern: 'percent-split',
+    source: 'live',
+    approach: String(json.approach || 'Provider split').slice(0, 240),
+    allocations,
+    superseded: false,
+  };
+}
+
+export function createOrchestrator({
+  getState,
+  dispatch,
+  getSecrets,
+  roster,
+  delay,
+  now,
+  id,
+  complete = completeLive,
+}) {
+  let generation = 0;
+
+  function start() {
+    generation += 1;
+    return generation;
+  }
+
+  function alive(token) {
+    return token === generation;
+  }
+
+  function invalidate() {
+    generation += 1;
+  }
+
+  function workingShares(state, proposal) {
+    const allowed = new Set(enabledKnights(state, roster).map((seat) => seat.id));
+    return (proposal?.allocations || []).filter((row) => row.percent > 0 && allowed.has(row.seatId));
+  }
+
+  function speakAs(seat, text) {
+    dispatch({
+      type: 'MESSAGE_APPENDED',
+      message: {
+        id: id('msg'),
+        seatId: seat.id,
+        kind: 'chat',
+        text,
+        status: 'done',
+        createdAt: now(),
+      },
+    });
+  }
+
+  async function speakStatus(token, seat, line, channel, ephemeral = false) {
+    if (!alive(token) || !line) return;
+    if (channel === 'feed') {
+      dispatch({ type: 'FEED_ADD', id: id('feed'), text: line, ephemeral });
+      return;
+    }
+    dispatch({
+      type: 'MESSAGE_APPENDED',
+      message: {
+        id: id('msg'),
+        seatId: seat.id,
+        kind: 'status',
+        text: line,
+        status: 'done',
+        ephemeral,
+        createdAt: now(),
+      },
+    });
+  }
+
+  function watch(token, seat, channel) {
+    const started = Date.now();
+    const seen = new Set();
+    const timer = setInterval(() => {
+      if (!alive(token)) {
+        clearInterval(timer);
+        return;
+      }
+      const elapsed = Date.now() - started;
+      const status = elapsed >= 4000 ? 'working' : 'thinking';
+      dispatch({ type: 'SET_SEAT_STATUS', seatId: seat.id, status, now: now() });
+      const line = heartbeatLine(seat.name, status, elapsed);
+      if (line && !seen.has(line)) {
+        seen.add(line);
+        speakStatus(token, seat, line, channel, true);
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }
+
+  async function draft(token) {
+    const state = getState();
+    const bot = resolveArbiter(state, roster);
+    dispatch({ type: 'SET_SEAT_STATUS', seatId: bot.id, status: 'thinking', now: now() });
+    await speakStatus(token, bot, initialStatusLine(bot.name, 'thinking'), 'feed', true);
+    const knightsOn = enabledKnights(state, roster);
+    let proposal = null;
+    const secret = getSecrets()[bot.providerId];
+    if (!secret) {
+      await speakStatus(
+        token,
+        bot,
+        `${bot.name} has no API key on this device. Drafting a local preview.`,
+        'feed',
+      );
+      await delay(320);
+    } else {
+      const stop = watch(token, bot, 'feed');
+      let result = { ok: false, message: 'The provider call failed.' };
+      try {
+        result = await complete({
+          providerId: bot.providerId,
+          apiKey: secret,
+          system: `You are ${bot.name}, arbiter of the Round Table. Reply with JSON only: {"approach": string, "allocations": [{"seatId": string, "percent": number, "responsibility": string}]}. Percents must sum to 100. Only use the given seat ids.`,
+          user: JSON.stringify({
+            prompt: state.prompt,
+            note: state.phase.note || '',
+            seats: knightsOn.map((seat) => seat.id),
+          }),
+        });
+      } catch {
+        result = { ok: false, message: 'The provider call failed.' };
+      }
+      stop();
+      if (!alive(token)) return;
+      if (result.ok) {
+        proposal = parseLiveProposal(result.text, { id: id('prop'), revision: state.phase.revision, knightsOn });
+        if (!proposal) {
+          await speakStatus(token, bot, `${bot.name} could not use the provider reply. Drafting a local preview.`, 'feed');
+        }
+      } else {
+        await speakStatus(
+          token,
+          bot,
+          `${bot.name} could not draft a live split. ${result.message} Drafting a local preview.`,
+          'feed',
+        );
+      }
+    }
+    if (!alive(token)) return;
+    if (!proposal) {
+      proposal = buildProposal({
+        prompt: state.prompt,
+        knights: knightsOn,
+        revision: getState().phase.revision || 1,
+        id: id('prop'),
+        note: getState().phase.note || '',
+        source: 'preview',
+      });
+    }
+    const allowed = new Set(knightsOn.map((seat) => seat.id));
+    proposal = {
+      ...proposal,
+      allocations: (proposal.allocations || []).filter((row) => allowed.has(row.seatId)),
+    };
+    dispatch({ type: 'SET_SEAT_STATUS', seatId: bot.id, status: 'idle', now: now() });
+    dispatch({ type: 'PROPOSAL_RECEIVED', proposal });
+  }
+
+  async function votes(token) {
+    const state = getState();
+    const proposal = latestProposal(state);
+    if (!proposal) return;
+    const bot = resolveArbiter(state, roster);
+    await speakStatus(token, bot, `${bot.name} is opening the vote.`, 'feed');
+    const rows = enabledKnights(getState(), roster);
+    for (let index = 0; index < rows.length; index += 1) {
+      if (!alive(token) || getState().phase.name !== 'voting') return;
+      const seat = rows[index];
+      rows.slice(index + 1).forEach((waiting) => {
+        dispatch({ type: 'SET_SEAT_STATUS', seatId: waiting.id, status: 'waiting', now: now() });
+      });
+      dispatch({ type: 'SET_SEAT_STATUS', seatId: seat.id, status: 'thinking', now: now() });
+      await speakStatus(token, seat, initialStatusLine(seat.name, 'weighing the split'), 'feed', true);
+      await delay(200);
+      if (!alive(token)) return;
+      const share = proposal.allocations.find((row) => row.seatId === seat.id);
+      dispatch({
+        type: 'VOTE_CAST',
+        vote: {
+          kind: 'vote',
+          seatId: seat.id,
+          proposalId: proposal.id,
+          choice: 'agree',
+          reason: share ? `${share.percent}% on ${share.responsibility} is a fair cut.` : 'The split is workable.',
+          at: now(),
+        },
+      });
+      dispatch({ type: 'SET_SEAT_STATUS', seatId: seat.id, status: 'idle', now: now() });
+    }
+    if (!alive(token)) return;
+    dispatch({ type: 'VOTES_RESOLVED' });
+  }
+
+  async function kickoff(token) {
+    const state = getState();
+    const proposal = latestProposal(state);
+    const bot = resolveArbiter(state, roster);
+    speakAs(bot, `${bot.name}: Plan approved. ${proposal?.approach || 'The table is open.'}`);
+    const shares = workingShares(state, proposal);
+    for (const share of shares) {
+      if (!alive(token)) return;
+      const seat = seatById(share.seatId, roster);
+      if (!seat || seat.id === bot.id) continue;
+      dispatch({ type: 'SET_SEAT_STATUS', seatId: seat.id, status: 'working', now: now() });
+      speakAs(bot, `${bot.name} is handing off to ${seat.name}…`);
+      await delay(140);
+      if (!alive(token)) return;
+      dispatch({
+        type: 'MESSAGE_APPENDED',
+        message: {
+          id: id('msg'),
+          seatId: seat.id,
+          kind: 'chat',
+          text: `Taking ${share.percent}% — ${share.responsibility}.`,
+          status: 'done',
+          createdAt: now(),
+        },
+      });
+      dispatch({ type: 'SET_SEAT_STATUS', seatId: seat.id, status: 'idle', now: now() });
+    }
+    if (!alive(token)) return;
+    dispatch({ type: 'KICKOFF_DONE' });
+  }
+
+  async function streamPreview(token, seat, text) {
+    const messageId = id('msg');
+    dispatch({
+      type: 'MESSAGE_APPENDED',
+      message: {
+        id: messageId,
+        seatId: seat.id,
+        kind: 'chat',
+        text: '',
+        status: 'streaming',
+        createdAt: now(),
+      },
+    });
+    const parts = text.split(/(\s+)/);
+    let acc = '';
+    for (const part of parts) {
+      acc += part;
+      if (!alive(token)) return;
+      dispatch({ type: 'MESSAGE_PATCHED', id: messageId, text: acc, status: 'streaming' });
+      await delay(16);
+    }
+    if (!alive(token)) return;
+    dispatch({ type: 'MESSAGE_PATCHED', id: messageId, text: acc, status: 'done' });
+  }
+
+  async function converse(token, question) {
+    const state = getState();
+    const proposal = latestProposal(state);
+    const arbiter = resolveArbiter(state, roster);
+    let seatId = state.targetSeatId;
+    if (!seatId) {
+      const lead = workingShares(state, proposal).sort((a, b) => b.percent - a.percent)[0];
+      seatId = lead?.seatId || arbiter.id;
+      const leadSeat = seatById(seatId, roster);
+      if (seatId !== arbiter.id) {
+        speakAs(arbiter, `${arbiter.name} is handing this to ${leadSeat?.name || 'the table'}…`);
+      }
+    }
+    const seat = seatById(seatId, roster);
+    if (!seat) return;
+    const asArbiter = seat.id === arbiter.id;
+    dispatch({ type: 'SET_SEAT_STATUS', seatId: seat.id, status: 'thinking', now: now() });
+    await speakStatus(token, seat, initialStatusLine(seat.name, 'thinking'), 'chat', true);
+    const secret = getSecrets()[seat.providerId];
+    const allocation = proposal?.allocations.find((row) => row.seatId === seat.id);
+    if (secret) {
+      const stop = watch(token, seat, 'chat');
+      let result = { ok: false, code: 'network', message: 'The provider call failed.' };
+      try {
+        result = await complete({
+          providerId: seat.providerId,
+          apiKey: secret,
+          system: `You are ${seat.name} (${seat.tagline}) at the Round Table. Answer in 2-4 sentences.`,
+          user: `Quest: ${state.prompt}\nShare: ${allocation ? `${allocation.percent}% ${allocation.responsibility}` : 'arbiter'}\nKing: ${question}`,
+        });
+      } catch {
+        result = { ok: false, code: 'network', message: 'The provider call failed.' };
+      }
+      if (alive(token) && !result.ok && result.code === 'timeout') {
+        await speakStatus(token, seat, `${seat.name} timed out. Retrying once.`, 'chat', true);
+        result = await complete({
+          providerId: seat.providerId,
+          apiKey: secret,
+          system: `You are ${seat.name}. Answer briefly.`,
+          user: question,
+        });
+      }
+      stop();
+      if (!alive(token)) return;
+      if (!result.ok) {
+        dispatch({ type: 'SET_SEAT_STATUS', seatId: seat.id, status: 'blocked', detail: result.message, now: now() });
+        await speakStatus(token, seat, blockedLine(seat.name, result.message), 'chat');
+        dispatch({
+          type: 'MESSAGE_APPENDED',
+          message: {
+            id: id('msg'),
+            seatId: seat.id,
+            kind: 'chat',
+            text: `I'm blocked. ${result.message}`,
+            status: 'done',
+            createdAt: now(),
+          },
+        });
+        return;
+      }
+      await streamPreview(token, seat, result.text);
+    } else {
+      await delay(260);
+      if (!alive(token)) return;
+      if (asArbiter) {
+        await speakStatus(token, seat, `${seat.name} has no API key on this device. This reply is a local preview.`, 'chat');
+      }
+      await streamPreview(token, seat, previewReply(seat, state.prompt, question, allocation, asArbiter));
+    }
+    if (!alive(token)) return;
+    if (getState().seats[seat.id]?.status !== 'blocked') {
+      dispatch({ type: 'SET_SEAT_STATUS', seatId: seat.id, status: 'idle', now: now() });
+    }
+  }
+
+  return {
+    invalidate,
+    after(action) {
+      if (action.type === 'SESSION_RESET') {
+        invalidate();
+        return Promise.resolve();
+      }
+      if (action.type === 'PROMPT_SUBMITTED' || action.type === 'REVISION_REQUESTED' || action.type === 'PROPOSAL_RETRY') {
+        return draft(start());
+      }
+      if (action.type === 'VOTE_CALLED') return votes(start());
+      if (action.type === 'IMPLEMENT') return kickoff(start());
+      if (action.type === 'SEND') {
+        const question = getState().messages.find((message) => message.id === action.messageId)?.text || '';
+        return converse(start(), question);
+      }
+      return Promise.resolve();
+    },
+  };
+}
