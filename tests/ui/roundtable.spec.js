@@ -159,9 +159,13 @@ test.describe('round table', () => {
     await page.getByTestId('call-vote').click();
     await page.getByTestId('approve-plan').click();
     const chat = page.getByTestId('chat-panel');
+    const handoff = page.locator('.msg', { hasText: /ClaudeBot is handing off to/ });
     await expect(chat).toContainText(/ClaudeBot: Plan approved/);
-    await expect(chat).toContainText(/ClaudeBot is handing off to/);
+    await expect(handoff.first()).toBeVisible();
+    await expect(handoff.first().locator('.seat-icon')).toHaveText('CL');
+    await expect(page.locator('.status-line', { hasText: /Handing off to/ })).toHaveCount(0);
     await expect(chat).not.toContainText(/BotBot/);
+    await expect(page.locator('.msg', { hasText: /Taking / }).first().locator('.seat-icon')).not.toHaveText('⬡');
     expect(page.url()).not.toContain('relay.andrewos.com');
   });
 });

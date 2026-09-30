@@ -67,6 +67,25 @@ export function createOrchestrator({
     generation += 1;
   }
 
+  function workingShares(state, proposal) {
+    const allowed = new Set(enabledKnights(state, roster).map((seat) => seat.id));
+    return (proposal?.allocations || []).filter((row) => row.percent > 0 && allowed.has(row.seatId));
+  }
+
+  function speakAs(seat, text) {
+    dispatch({
+      type: 'MESSAGE_APPENDED',
+      message: {
+        id: id('msg'),
+        seatId: seat.id,
+        kind: 'chat',
+        text,
+        status: 'done',
+        createdAt: now(),
+      },
+    });
+  }
+
   async function speakStatus(token, seat, line, channel, ephemeral = false) {
     if (!alive(token) || !line) return;
     if (channel === 'feed') {
@@ -167,6 +186,11 @@ export function createOrchestrator({
         source: 'preview',
       });
     }
+    const allowed = new Set(knightsOn.map((seat) => seat.id));
+    proposal = {
+      ...proposal,
+      allocations: (proposal.allocations || []).filter((row) => allowed.has(row.seatId)),
+    };
     dispatch({ type: 'SET_SEAT_STATUS', seatId: bot.id, status: 'idle', now: now() });
     dispatch({ type: 'PROPOSAL_RECEIVED', proposal });
   }
@@ -210,24 +234,14 @@ export function createOrchestrator({
     const state = getState();
     const proposal = latestProposal(state);
     const bot = resolveArbiter(state, roster);
-    dispatch({
-      type: 'MESSAGE_APPENDED',
-      message: {
-        id: id('msg'),
-        seatId: bot.id,
-        kind: 'chat',
-        text: `${bot.name}: Plan approved. ${proposal?.approach || 'The table is open.'}`,
-        status: 'done',
-        createdAt: now(),
-      },
-    });
-    const shares = (proposal?.allocations || []).filter((row) => row.percent > 0);
+    speakAs(bot, `${bot.name}: Plan approved. ${proposal?.approach || 'The table is open.'}`);
+    const shares = workingShares(state, proposal);
     for (const share of shares) {
       if (!alive(token)) return;
       const seat = seatById(share.seatId, roster);
-      if (!seat) continue;
+      if (!seat || seat.id === bot.id) continue;
       dispatch({ type: 'SET_SEAT_STATUS', seatId: seat.id, status: 'working', now: now() });
-      await speakStatus(token, bot, `${bot.name} is handing off to ${seat.name}…`, 'chat');
+      speakAs(bot, `${bot.name} is handing off to ${seat.name}…`);
       await delay(140);
       if (!alive(token)) return;
       dispatch({
@@ -278,11 +292,11 @@ export function createOrchestrator({
     const arbiter = resolveArbiter(state, roster);
     let seatId = state.targetSeatId;
     if (!seatId) {
-      const lead = [...(proposal?.allocations || [])].sort((a, b) => b.percent - a.percent)[0];
+      const lead = workingShares(state, proposal).sort((a, b) => b.percent - a.percent)[0];
       seatId = lead?.seatId || arbiter.id;
       const leadSeat = seatById(seatId, roster);
       if (seatId !== arbiter.id) {
-        await speakStatus(token, arbiter, `${arbiter.name} is handing this to ${leadSeat?.name || 'the table'}…`, 'chat');
+        speakAs(arbiter, `${arbiter.name} is handing this to ${leadSeat?.name || 'the table'}…`);
       }
     }
     const seat = seatById(seatId, roster);

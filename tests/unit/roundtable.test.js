@@ -253,9 +253,10 @@ describe('round table council', () => {
     state = reduce(state, { type: 'IMPLEMENT' }, round.ctx);
     await liveOrchestrator.after({ type: 'IMPLEMENT' });
     const kickoff = state.messages.map((message) => message.text).join('\n');
-    expect(state.messages.some((message) => message.seatId === 'claude' && /ClaudeBot: Plan approved/.test(message.text))).toBe(true);
-    expect(kickoff).toMatch(/ClaudeBot is handing off to/);
+    expect(state.messages.some((message) => message.seatId === 'claude' && message.kind === 'chat' && /ClaudeBot: Plan approved/.test(message.text))).toBe(true);
+    expect(state.messages.some((message) => message.seatId === 'claude' && message.kind === 'chat' && /ClaudeBot is handing off to CodexBot/.test(message.text))).toBe(true);
     expect(kickoff).not.toMatch(/BotBot/);
+    expect(state.messages.some((message) => message.seatId === 'botbot')).toBe(false);
     state = reduce(state, { type: 'SEND', text: 'Where do we start?', messageId: 'ask_1' }, round.ctx);
     await liveOrchestrator.after({ type: 'SEND', messageId: 'ask_1' });
     const transcript = state.messages.map((message) => message.text).join('\n');
@@ -288,7 +289,59 @@ describe('round table council', () => {
     const transcript = state.messages.map((message) => message.text).join('\n');
     expect(transcript).toMatch(/BotBot: Plan approved/);
     expect(transcript).toMatch(/BotBot is handing off to CodexBot/);
-    expect(state.messages.some((message) => message.seatId === 'botbot' && /Plan approved/.test(message.text))).toBe(true);
+    expect(state.messages.some((message) => message.seatId === 'botbot' && message.kind === 'chat' && /BotBot is handing off to CodexBot/.test(message.text))).toBe(true);
+    expect(transcript).not.toMatch(/^Handing off to/m);
+  });
+
+  it('ignores a BotBot share when another seat is arbiter', async () => {
+    const round = harness();
+    round.dispatch({ type: 'ARBITER_SET', seatId: 'claude' });
+    round.dispatch({ type: 'SEATS_CONFIRMED' });
+    round.dispatch({ type: 'PROMPT_CHANGED', text: 'Design a settings page' });
+    round.dispatch({ type: 'PROMPT_SUBMITTED' });
+    round.dispatch({
+      type: 'PROPOSAL_RECEIVED',
+      proposal: {
+        id: 'prop_old',
+        revision: 1,
+        pattern: 'percent-split',
+        source: 'preview',
+        approach: 'Percent split across 5 seats.',
+        superseded: false,
+        allocations: [
+          { seatId: 'botbot', percent: 20, responsibility: 'Frontend & interaction' },
+          { seatId: 'codex', percent: 80, responsibility: 'Backend' },
+        ],
+      },
+    });
+    round.dispatch({ type: 'VOTE_CALLED' });
+    for (const seat of enabledKnights(round.state, ROSTER)) {
+      round.dispatch({
+        type: 'VOTE_CAST',
+        vote: { kind: 'vote', seatId: seat.id, proposalId: 'prop_old', choice: 'agree', reason: 'yes' },
+      });
+    }
+    round.dispatch({ type: 'VOTES_RESOLVED' });
+    let state = round.state;
+    let n = 0;
+    const orchestrator = createOrchestrator({
+      getState: () => state,
+      dispatch(action) { state = reduce(state, action, round.ctx); },
+      getSecrets: () => ({}),
+      roster: ROSTER,
+      delay: async () => {},
+      now: () => '2026-01-01T00:00:00.000Z',
+      id: (kind) => `${kind}_${(n += 1)}`,
+    });
+    state = reduce(state, { type: 'IMPLEMENT' }, round.ctx);
+    await orchestrator.after({ type: 'IMPLEMENT' });
+    const transcript = state.messages.map((message) => `${message.seatId}|${message.kind}|${message.text}`).join('\n');
+    expect(transcript).toMatch(/claude\|chat\|ClaudeBot: Plan approved/);
+    expect(transcript).toMatch(/claude\|chat\|ClaudeBot is handing off to CodexBot/);
+    expect(transcript).not.toMatch(/BotBot/);
+    expect(transcript).not.toMatch(/Handing off to BotBot/);
+    expect(dockSeatIds(state, ROSTER)).not.toContain('botbot');
+    expect(dockSeatIds(state, ROSTER)).toContain('claude');
   });
 });
 

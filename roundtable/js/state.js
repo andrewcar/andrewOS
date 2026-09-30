@@ -98,6 +98,7 @@ export function dockSeatIds(state, roster) {
     if (seat.role === 'king') return false;
     const seatState = state.seats[seat.id];
     if (!seatState?.enabled) return false;
+    if (seat.role === 'arbiter' && seat.id !== arbiterId) return false;
     if (seat.id === arbiterId) return true;
     if (seatState.joinedMidQuest) return true;
     if (!proposal) return true;
