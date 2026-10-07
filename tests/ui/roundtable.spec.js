@@ -12,7 +12,7 @@ test.describe('round table', () => {
     await page.getByLabel('Password').fill('correct-horse');
     await page.getByTestId('auth-form').getByRole('button', { name: 'Create account' }).click();
 
-    await page.getByRole('button', { name: 'Settings' }).click();
+    await page.getByRole('banner').getByRole('button', { name: 'Settings' }).click();
     await expect(page.getByTestId('keys-empty')).toBeVisible();
     await expect(page.getByText('Not set').first()).toBeVisible();
     await page.getByRole('button', { name: 'Back' }).click();
@@ -109,7 +109,7 @@ test.describe('round table', () => {
     await expect(page.getByTestId('seat-target-muse')).toBeVisible();
 
     await page.getByTestId('seat-target-codex').click();
-    await expect(page.getByTestId('target-chip')).toContainText('CodexBot');
+    await expect(page.getByTestId('target-chip')).toContainText('Codex');
     await msg.hover();
     await reply.click();
     const composer = page.getByTestId('composer-textarea');
@@ -136,10 +136,10 @@ test.describe('round table', () => {
     await expect(arbiter).toHaveValue('botbot');
     await arbiter.selectOption('claude');
     await expect(arbiter).toHaveValue('claude');
-    await expect(page.getByTestId('arbiter-note')).toContainText(/ClaudeBot has no API key/i);
+    await expect(page.getByTestId('arbiter-note')).toContainText(/Claude has no API key/i);
 
-    await page.getByRole('button', { name: 'Settings' }).click();
-    await expect(page.getByTestId('arbiter-key-note')).toContainText(/ClaudeBot is the arbiter and has no key/i);
+    await page.getByRole('banner').getByRole('button', { name: 'Settings' }).click();
+    await expect(page.getByTestId('arbiter-key-note')).toContainText(/Claude is the arbiter and has no key/i);
     await page.getByRole('button', { name: 'Back' }).click();
 
     await page.getByTestId('new-table').click();
@@ -149,22 +149,22 @@ test.describe('round table', () => {
     await expect(page.getByTestId('arbiter-select')).toHaveValue('claude');
     await page.getByTestId('prompt-textarea').fill('Sketch a landing page');
     await page.getByTestId('prompt-submit').click();
-    await expect(page.getByTestId('planning-feed')).toContainText(/ClaudeBot is thinking/i);
-    await expect(page.getByTestId('planning-feed')).toContainText(/ClaudeBot has no API key/i);
-    await expect(page.getByTestId('proposal-card')).toContainText(/ClaudeBot/);
+    await expect(page.getByTestId('planning-feed')).toContainText(/Claude is thinking/i);
+    await expect(page.getByTestId('planning-feed')).toContainText(/Claude has no API key/i);
+    await expect(page.getByTestId('proposal-card')).toContainText(/Claude/);
     await expect(page.getByTestId('proposal-card')).toContainText(/preview/i);
 
     await page.reload();
-    await expect(page.getByTestId('proposal-card')).toContainText(/ClaudeBot/);
+    await expect(page.getByTestId('proposal-card')).toContainText(/Claude/);
     await page.getByTestId('call-vote').click();
     await page.getByTestId('approve-plan').click();
     const chat = page.getByTestId('chat-panel');
-    const handoff = page.locator('.msg', { hasText: /ClaudeBot is handing off to/ });
-    await expect(chat).toContainText(/ClaudeBot: Plan approved/);
+    const handoff = page.locator('.msg', { hasText: /Claude is handing off to/ });
+    await expect(chat).toContainText(/Claude: Plan approved/);
     await expect(handoff.first()).toBeVisible();
     await expect(handoff.first().locator('.seat-icon')).toHaveText('CL');
     await expect(page.locator('.status-line', { hasText: /Handing off to/ })).toHaveCount(0);
-    await expect(chat).not.toContainText(/BotBot/);
+    await expect(chat).not.toContainText(/BotBot|CodexBot|ClaudeBot|GeminiBot|MuseBot|DeepSeekBot/);
     await expect(page.locator('.msg', { hasText: /Taking / }).first().locator('.seat-icon')).not.toHaveText('⬡');
     expect(page.url()).not.toContain('relay.andrewos.com');
   });

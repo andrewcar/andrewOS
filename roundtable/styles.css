@@ -117,7 +117,7 @@ input, textarea {
   left: 50%;
   top: 50%;
   translate: -50% -50%;
-  width: min(520px, 100%);
+  width: min(560px, calc(100% - 8px));
   aspect-ratio: 1;
 }
 .table-layer[data-mode="dock"] {
@@ -151,7 +151,7 @@ input, textarea {
 .ring, .medallion, .seat { position: absolute; }
 .ring {
   left: 50%; top: 50%;
-  width: 74%; height: 74%;
+  width: 68%; height: 68%;
   transform: translate(-50%, -50%);
   border-radius: 50%;
   border: 1px solid rgba(228, 179, 99, 0.35);
@@ -160,7 +160,7 @@ input, textarea {
 }
 .medallion {
   left: 50%; top: 50%;
-  width: 34%; height: 34%;
+  width: 30%; height: 30%;
   transform: translate(-50%, -50%);
   border-radius: 50%;
   border: 1px solid rgba(228, 179, 99, 0.45);
@@ -178,8 +178,10 @@ input, textarea {
 .table-layer[data-mode="dock"] .medallion-kicker,
 .table-layer[data-mode="dock"] .seat-name { display: none; }
 .table-layer[data-mode="dock"] .medallion-title { font-size: 10px; letter-spacing: 0.12em; }
+.table-layer[data-mode="dock"] .ring { width: 74%; height: 74%; }
+.table-layer[data-mode="dock"] .medallion { width: 34%; height: 34%; }
 .seat {
-  width: 56px; height: 56px;
+  width: 52px; height: 52px;
   margin: 0;
   transform: translate(-50%, -50%);
   border-radius: 50%;
@@ -196,14 +198,18 @@ input, textarea {
 .seat-glyph { font-family: var(--mono); font-size: 12px; color: var(--seat); }
 .seat-name {
   position: absolute;
-  top: calc(100% + 3px);
+  top: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 0.02em;
+  line-height: 1.2;
   color: var(--fg-secondary);
   pointer-events: none;
+  max-width: 5.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .seat[data-enabled="false"] { opacity: 0.38; }
 .seat[data-status="thinking"] .seat-glyph,
@@ -251,7 +257,15 @@ input, textarea {
 .planning-actions p { margin: 0 0 8px; }
 .planning-actions .row { justify-content: flex-start; }
 @media (max-height: 760px) {
-  .app[data-focus="table"] .stage { min-height: 220px; flex-basis: 42%; }
+  .app[data-focus="table"] .stage { min-height: 240px; flex-basis: 46%; }
+  .table-layer[data-mode="full"] { width: min(480px, calc(100% - 4px)); }
+  .table-layer[data-mode="full"] .seat { width: 46px; height: 46px; }
+  .table-layer[data-mode="full"] .seat-name { top: calc(100% + 4px); font-size: 9px; max-width: 4.8rem; }
+}
+@media (max-width: 420px) {
+  .table-layer[data-mode="full"] { width: min(100%, calc(100vw - 4px)); }
+  .table-layer[data-mode="full"] .seat { width: 44px; height: 44px; }
+  .table-layer[data-mode="full"] .seat-name { top: calc(100% + 5px); font-size: 9px; max-width: 4.4rem; }
 }
 .card {
   border: 1px solid var(--line);

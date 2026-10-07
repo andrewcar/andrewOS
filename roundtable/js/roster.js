@@ -3,11 +3,11 @@
 export const ROSTER = [
   { id: 'king', name: 'You', role: 'king', providerId: 'human', accent: '#E7E9EF', mark: { kind: 'sigil', glyph: '♔' }, tagline: 'King', defaultEnabled: true, order: -1 },
   { id: 'botbot', name: 'Grok (API)', role: 'arbiter', providerId: 'arbiter', accent: '#E4B363', mark: { kind: 'sigil', glyph: '⬡' }, tagline: 'xAI', defaultEnabled: true, order: -1 },
-  { id: 'codex', name: 'CodexBot', role: 'knight', providerId: 'openai', accent: '#10A37F', mark: { kind: 'initials', text: 'CX' }, tagline: 'OpenAI', defaultEnabled: true, order: 0 },
-  { id: 'claude', name: 'ClaudeBot', role: 'knight', providerId: 'anthropic', accent: '#D4A27F', mark: { kind: 'initials', text: 'CL' }, tagline: 'Anthropic', defaultEnabled: true, order: 1 },
-  { id: 'gemini', name: 'GeminiBot', role: 'knight', providerId: 'google', accent: '#4E8DF5', mark: { kind: 'initials', text: 'GM' }, tagline: 'Google Gemini', defaultEnabled: true, order: 2 },
-  { id: 'muse', name: 'MuseBot', role: 'knight', providerId: 'meta', accent: '#8B7CF6', mark: { kind: 'initials', text: 'MU' }, tagline: 'Meta Muse', defaultEnabled: true, order: 3 },
-  { id: 'deepseek', name: 'DeepSeekBot', role: 'knight', providerId: 'deepseek', accent: '#4D6BFE', mark: { kind: 'initials', text: 'DS' }, tagline: 'DeepSeek', defaultEnabled: true, order: 4 },
+  { id: 'codex', name: 'Codex', role: 'knight', providerId: 'openai', accent: '#10A37F', mark: { kind: 'initials', text: 'CX' }, tagline: 'OpenAI', defaultEnabled: true, order: 0 },
+  { id: 'claude', name: 'Claude', role: 'knight', providerId: 'anthropic', accent: '#D4A27F', mark: { kind: 'initials', text: 'CL' }, tagline: 'Anthropic', defaultEnabled: true, order: 1 },
+  { id: 'gemini', name: 'Gemini', role: 'knight', providerId: 'google', accent: '#4E8DF5', mark: { kind: 'initials', text: 'GM' }, tagline: 'Google Gemini', defaultEnabled: true, order: 2 },
+  { id: 'muse', name: 'Muse', role: 'knight', providerId: 'meta', accent: '#8B7CF6', mark: { kind: 'initials', text: 'MU' }, tagline: 'Meta Muse', defaultEnabled: true, order: 3 },
+  { id: 'deepseek', name: 'DeepSeek', role: 'knight', providerId: 'deepseek', accent: '#4D6BFE', mark: { kind: 'initials', text: 'DS' }, tagline: 'DeepSeek', defaultEnabled: true, order: 4 },
 ];
 
 export const PROVIDERS = [
@@ -16,7 +16,7 @@ export const PROVIDERS = [
   { id: 'google', label: 'Gemini', hint: 'Google AI Studio key', seatId: 'gemini' },
   { id: 'meta', label: 'Muse', hint: 'Muse key — stored only, no browser relay yet', seatId: 'muse' },
   { id: 'deepseek', label: 'DeepSeek', hint: 'DeepSeek API key', seatId: 'deepseek' },
-  { id: 'arbiter', label: 'xAI API', hint: 'xAI API key — talks to Grok models over the API. Not a Grok Bot assistant (no tools, memory, or fleet).', seatId: 'botbot' },
+  { id: 'arbiter', label: 'Grok (API)', hint: 'xAI API key — talks to Grok models over the API. Not a full assistant (no tools or memory).', seatId: 'botbot' },
 ];
 
 export function knights(roster = ROSTER) {
@@ -36,9 +36,10 @@ export function markGlyph(seat) {
 }
 
 /** Positions are percentages of the table layer so the disc can scale without JS math per frame. */
-export function layoutSeats(seats) {
+export function layoutSeats(seats, mode = 'full') {
   const count = Math.max(seats.length, 1);
-  const radius = 33;
+  // Full mode needs a wider orbit so seat labels do not collide; dock hides labels and stays compact.
+  const radius = mode === 'dock' ? 34 : 41;
   return seats.map((seat, index) => {
     const angle = -Math.PI / 2 + (index * 2 * Math.PI) / count;
     return {
