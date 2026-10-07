@@ -62,9 +62,23 @@ curl -s http://127.0.0.1:8787/rt/v1/roster
 curl -s -X POST http://127.0.0.1:8787/rt/v1/sessions
 ```
 
+## Production BASE_URL
+
+Live connector (MCP / clients default):
+
+```text
+https://round-table-connector.andrew-carvajal.workers.dev
+```
+
+Example: `GET https://round-table-connector.andrew-carvajal.workers.dev/rt/v1/health`
+
+`andrewos.com/rt` is **not** wired yet — apex `andrewos.com` is GitHub Pages. A custom path or host (e.g. Cloudflare zone + `rt.andrewos.com` CNAME) is a separate follow-up; this Worker stays on `workers.dev` only.
+
+Override with `ROUND_TABLE_API_BASE` when needed. Local `npm run rt:dev` (below) still uses `http://127.0.0.1:8787`.
+
 ## Grok Bot / MCP install
 
-1. Deploy or run the connector so `BASE_URL` resolves (e.g. `http://127.0.0.1:8787` or your Workers URL).
+1. Point clients at the production `BASE_URL` above (or local `http://127.0.0.1:8787` while developing). Defaults live in [`mcp-tools.json`](./mcp-tools.json) / [`../../mcp/round-table/tools.json`](../../mcp/round-table/tools.json).
 2. Point the MCP client at [`mcp-tools.json`](./mcp-tools.json) (also mirrored under [`../../mcp/round-table/`](../../mcp/round-table/)).
 3. Flow a primary Grok Bot should use:
    1. `rt_health` — confirm the API is up
