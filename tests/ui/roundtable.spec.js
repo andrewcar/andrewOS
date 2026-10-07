@@ -12,7 +12,7 @@ test.describe('round table', () => {
     await page.getByLabel('Password').fill('correct-horse');
     await page.getByTestId('auth-form').getByRole('button', { name: 'Create account' }).click();
 
-    await page.getByRole('button', { name: 'Settings' }).click();
+    await page.getByRole('banner').getByRole('button', { name: 'Settings' }).click();
     await expect(page.getByTestId('keys-empty')).toBeVisible();
     await expect(page.getByText('Not set').first()).toBeVisible();
     await page.getByRole('button', { name: 'Back' }).click();
@@ -138,7 +138,7 @@ test.describe('round table', () => {
     await expect(arbiter).toHaveValue('claude');
     await expect(page.getByTestId('arbiter-note')).toContainText(/Claude has no API key/i);
 
-    await page.getByRole('button', { name: 'Settings' }).click();
+    await page.getByRole('banner').getByRole('button', { name: 'Settings' }).click();
     await expect(page.getByTestId('arbiter-key-note')).toContainText(/Claude is the arbiter and has no key/i);
     await page.getByRole('button', { name: 'Back' }).click();
 
