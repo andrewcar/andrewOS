@@ -94,10 +94,10 @@ describe('round table council', () => {
   });
 
   it('names a wait immediately and again if it drags on', () => {
-    expect(initialStatusLine('CodexBot', 'thinking')).toBe('CodexBot is thinking…');
-    expect(heartbeatLine('CodexBot', 'thinking', 1000)).toBeNull();
-    expect(heartbeatLine('CodexBot', 'waiting', 3000)).toMatch(/still waiting/);
-    expect(heartbeatLine('CodexBot', 'working', 12000)).toMatch(/timed out/);
+    expect(initialStatusLine('Codex', 'thinking')).toBe('Codex is thinking…');
+    expect(heartbeatLine('Codex', 'thinking', 1000)).toBeNull();
+    expect(heartbeatLine('Codex', 'waiting', 3000)).toMatch(/still waiting/);
+    expect(heartbeatLine('Codex', 'working', 12000)).toMatch(/timed out/);
   });
 
   it('posts a drafting status before the proposal exists', async () => {
@@ -139,11 +139,11 @@ describe('round table council', () => {
       prompt: round.state.prompt,
       knights: enabledKnights(round.state, ROSTER),
     });
-    round.dispatch({ type: 'FEED_ADD', id: 'feed_think', text: 'BotBot is thinking…', ephemeral: true });
+    round.dispatch({ type: 'FEED_ADD', id: 'feed_think', text: 'Grok (API) is thinking…', ephemeral: true });
     round.dispatch({ type: 'PROPOSAL_RECEIVED', proposal });
     expect(round.state.feed.some((line) => /thinking/i.test(line.text))).toBe(false);
     round.dispatch({ type: 'VOTE_CALLED' });
-    round.dispatch({ type: 'FEED_ADD', id: 'feed_vote', text: 'CodexBot is weighing the split…', ephemeral: true });
+    round.dispatch({ type: 'FEED_ADD', id: 'feed_vote', text: 'Codex is weighing the split…', ephemeral: true });
     for (const seat of enabledKnights(round.state, ROSTER)) {
       round.dispatch({
         type: 'VOTE_CAST',
@@ -158,7 +158,7 @@ describe('round table council', () => {
     round.dispatch({ type: 'KICKOFF_DONE' });
     round.dispatch({
       type: 'MESSAGE_APPENDED',
-      message: { id: 'status_1', seatId: 'codex', kind: 'status', text: 'CodexBot is thinking…', ephemeral: true, status: 'done' },
+      message: { id: 'status_1', seatId: 'codex', kind: 'status', text: 'Codex is thinking…', ephemeral: true, status: 'done' },
     });
     round.dispatch({
       type: 'MESSAGE_APPENDED',
@@ -207,10 +207,10 @@ describe('round table council', () => {
     state = reduce(state, { type: 'SEATS_CONFIRMED' }, round.ctx);
     state = reduce(state, { type: 'PROMPT_CHANGED', text: 'Design a settings page' }, round.ctx);
     state = reduce(state, { type: 'PROMPT_SUBMITTED' }, round.ctx);
-    expect(stripText(state, ROSTER, Date.parse('2026-01-01T00:00:00.000Z'))).toMatch(/ClaudeBot · drafting/);
+    expect(stripText(state, ROSTER, Date.parse('2026-01-01T00:00:00.000Z'))).toMatch(/Claude · drafting/);
     await orchestrator.after({ type: 'PROMPT_SUBMITTED' });
     expect(calls).toHaveLength(0);
-    expect(state.feed.some((line) => /ClaudeBot has no API key/i.test(line.text))).toBe(true);
+    expect(state.feed.some((line) => /Claude has no API key/i.test(line.text))).toBe(true);
     expect(state.proposals.at(-1).source).toBe('preview');
     expect(state.proposals.at(-1).allocations.some((row) => row.seatId === 'claude' || row.seatId === 'botbot')).toBe(false);
     expect(dockSeatIds(state, ROSTER)).toContain('claude');
@@ -230,7 +230,7 @@ describe('round table council', () => {
         return {
           ok: true,
           text: JSON.stringify({
-            approach: 'ClaudeBot leads the cut',
+            approach: 'Claude leads the cut',
             allocations: enabledKnights(state, ROSTER).map((seat, index, seats) => ({
               seatId: seat.id,
               percent: Math.floor(100 / seats.length) + (index < 100 % seats.length ? 1 : 0),
@@ -244,28 +244,28 @@ describe('round table council', () => {
     await liveOrchestrator.after({ type: 'REVISION_REQUESTED' });
     expect(live.map((request) => request.providerId)).toEqual(['anthropic']);
     expect(live[0].apiKey).toBe('sk-claude');
-    expect(live[0].system).toMatch(/ClaudeBot/);
+    expect(live[0].system).toMatch(/You are Claude/);
     expect(state.proposals.at(-1).source).toBe('live');
     state = reduce(state, { type: 'VOTE_CALLED' }, round.ctx);
     await liveOrchestrator.after({ type: 'VOTE_CALLED' });
-    expect(state.feed.some((line) => line.text === 'ClaudeBot is opening the vote.')).toBe(true);
+    expect(state.feed.some((line) => line.text === 'Claude is opening the vote.')).toBe(true);
     expect(state.phase.name).toBe('ready');
     state = reduce(state, { type: 'IMPLEMENT' }, round.ctx);
     await liveOrchestrator.after({ type: 'IMPLEMENT' });
     const kickoff = state.messages.map((message) => message.text).join('\n');
-    expect(state.messages.some((message) => message.seatId === 'claude' && message.kind === 'chat' && /ClaudeBot: Plan approved/.test(message.text))).toBe(true);
-    expect(state.messages.some((message) => message.seatId === 'claude' && message.kind === 'chat' && /ClaudeBot is handing off to CodexBot/.test(message.text))).toBe(true);
-    expect(kickoff).not.toMatch(/BotBot/);
+    expect(state.messages.some((message) => message.seatId === 'claude' && message.kind === 'chat' && /Claude: Plan approved/.test(message.text))).toBe(true);
+    expect(state.messages.some((message) => message.seatId === 'claude' && message.kind === 'chat' && /Claude is handing off to Codex/.test(message.text))).toBe(true);
+    expect(kickoff).not.toMatch(/BotBot|Grok \(API\)/);
     expect(state.messages.some((message) => message.seatId === 'botbot')).toBe(false);
     state = reduce(state, { type: 'SEND', text: 'Where do we start?', messageId: 'ask_1' }, round.ctx);
     await liveOrchestrator.after({ type: 'SEND', messageId: 'ask_1' });
     const transcript = state.messages.map((message) => message.text).join('\n');
-    expect(transcript).toMatch(/ClaudeBot is handing this to/);
-    expect(transcript).not.toMatch(/BotBot/);
+    expect(transcript).toMatch(/Claude is handing this to/);
+    expect(transcript).not.toMatch(/BotBot|Grok \(API\)/);
     expect(live.every((request) => request.providerId === 'anthropic' && request.apiKey === 'sk-claude')).toBe(true);
   });
 
-  it('lets BotBot lead chat when BotBot is the arbiter', async () => {
+  it('lets Grok (API) lead chat when it is the arbiter', async () => {
     const round = harness();
     let state = round.state;
     let n = 0;
@@ -287,13 +287,13 @@ describe('round table council', () => {
     state = reduce(state, { type: 'IMPLEMENT' }, round.ctx);
     await orchestrator.after({ type: 'IMPLEMENT' });
     const transcript = state.messages.map((message) => message.text).join('\n');
-    expect(transcript).toMatch(/BotBot: Plan approved/);
-    expect(transcript).toMatch(/BotBot is handing off to CodexBot/);
-    expect(state.messages.some((message) => message.seatId === 'botbot' && message.kind === 'chat' && /BotBot is handing off to CodexBot/.test(message.text))).toBe(true);
+    expect(transcript).toMatch(/Grok \(API\): Plan approved/);
+    expect(transcript).toMatch(/Grok \(API\) is handing off to Codex/);
+    expect(state.messages.some((message) => message.seatId === 'botbot' && message.kind === 'chat' && /Grok \(API\) is handing off to Codex/.test(message.text))).toBe(true);
     expect(transcript).not.toMatch(/^Handing off to/m);
   });
 
-  it('ignores a BotBot share when another seat is arbiter', async () => {
+  it('ignores a Grok (API) share when another seat is arbiter', async () => {
     const round = harness();
     round.dispatch({ type: 'ARBITER_SET', seatId: 'claude' });
     round.dispatch({ type: 'SEATS_CONFIRMED' });
@@ -336,10 +336,10 @@ describe('round table council', () => {
     state = reduce(state, { type: 'IMPLEMENT' }, round.ctx);
     await orchestrator.after({ type: 'IMPLEMENT' });
     const transcript = state.messages.map((message) => `${message.seatId}|${message.kind}|${message.text}`).join('\n');
-    expect(transcript).toMatch(/claude\|chat\|ClaudeBot: Plan approved/);
-    expect(transcript).toMatch(/claude\|chat\|ClaudeBot is handing off to CodexBot/);
-    expect(transcript).not.toMatch(/BotBot/);
-    expect(transcript).not.toMatch(/Handing off to BotBot/);
+    expect(transcript).toMatch(/claude\|chat\|Claude: Plan approved/);
+    expect(transcript).toMatch(/claude\|chat\|Claude is handing off to Codex/);
+    expect(transcript).not.toMatch(/BotBot|Grok \(API\)/);
+    expect(transcript).not.toMatch(/Handing off to Grok/);
     expect(dockSeatIds(state, ROSTER)).not.toContain('botbot');
     expect(dockSeatIds(state, ROSTER)).toContain('claude');
   });
