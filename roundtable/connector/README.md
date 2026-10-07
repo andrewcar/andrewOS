@@ -1,8 +1,8 @@
 # Round Table connector (slice 1)
 
-HTTP API + MCP tool descriptors so a **primary Grok Bot** (assistant with tools/memory) can run a Round Table quest — not merely open [the public webpage](https://andrewos.com/roundtable).
+HTTP API + MCP tool descriptors so a **primary Grok Bot** (assistant with tools/memory) can run a Round Table quest — not merely open [the public webpage](https://roundtable.lol).
 
-The public UI under `roundtable/` stays as-is. This connector is a parallel backend path.
+The public UI under `roundtable/` stays as-is (today also served at `https://andrewos.com/roundtable` on GitHub Pages). Canonical public home is **`https://roundtable.lol`**. After DNS/NS cutover (BotBot-owned; not this PR), `andrewos.com/roundtable` is expected to 301 to `roundtable.lol`. This connector is a parallel backend path.
 
 ## Honesty (read this)
 
@@ -64,17 +64,23 @@ curl -s -X POST http://127.0.0.1:8787/rt/v1/sessions
 
 ## Production BASE_URL
 
-Live connector (MCP / clients default):
+Canonical production base (MCP / clients default in `mcp-tools.json` / `tools.json`):
+
+```text
+https://roundtable.lol
+```
+
+Example: `GET https://roundtable.lol/rt/v1/...` (e.g. `GET https://roundtable.lol/rt/v1/health`)
+
+**DNS / routing status:** `roundtable.lol` was purchased; nameservers and Cloudflare zone/Worker custom-domain routing for `roundtable.lol/rt/*` are **BotBot-owned and not live in this PR**. Until Cloudflare routes `roundtable.lol/rt/*` to the connector Worker, clients may temporarily fall back to:
 
 ```text
 https://round-table-connector.andrew-carvajal.workers.dev
 ```
 
-Example: `GET https://round-table-connector.andrew-carvajal.workers.dev/rt/v1/health`
+Example fallback: `GET https://round-table-connector.andrew-carvajal.workers.dev/rt/v1/health`
 
-`andrewos.com/rt` is **not** wired yet — apex `andrewos.com` is GitHub Pages. A custom path or host (e.g. Cloudflare zone + `rt.andrewos.com` CNAME) is a separate follow-up; this Worker stays on `workers.dev` only.
-
-Override with `ROUND_TABLE_API_BASE` when needed. Local `npm run rt:dev` (below) still uses `http://127.0.0.1:8787`.
+Override with `ROUND_TABLE_API_BASE` when needed (e.g. point at workers.dev until cutover). Local `npm run rt:dev` still uses `http://127.0.0.1:8787`.
 
 ## Grok Bot / MCP install
 

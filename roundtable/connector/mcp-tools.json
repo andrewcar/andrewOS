@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Round Table connector API tools for a primary Grok Bot. Seats are public API products (Grok (API), Codex, Claude, Gemini, Muse, DeepSeek) using caller-provided keys — not fleet bots or BotBot.",
   "baseUrlEnv": "ROUND_TABLE_API_BASE",
-  "baseUrlDefault": "https://round-table-connector.andrew-carvajal.workers.dev",
+  "baseUrlDefault": "https://roundtable.lol",
   "auth": {
     "type": "bearer",
     "obtain": "POST /rt/v1/sessions",
