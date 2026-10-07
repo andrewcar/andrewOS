@@ -6,7 +6,8 @@
 const ENDPOINTS = {
   openai: { url: 'https://api.openai.com/v1/chat/completions', kind: 'openai', model: 'gpt-4o-mini' },
   deepseek: { url: 'https://api.deepseek.com/chat/completions', kind: 'openai', model: 'deepseek-chat' },
-  arbiter: { url: 'https://api.openai.com/v1/chat/completions', kind: 'openai', model: 'gpt-4o-mini' },
+  // OpenAI-compatible Chat Completions on xAI (https://api.x.ai/v1). Keys stay browser-side only.
+  arbiter: { url: 'https://api.x.ai/v1/chat/completions', kind: 'openai', model: 'grok-4.3' },
   anthropic: { url: 'https://api.anthropic.com/v1/messages', kind: 'anthropic', model: 'claude-3-5-haiku-latest' },
   google: { url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', kind: 'google', model: 'gemini-2.0-flash' },
   meta: null,
@@ -18,7 +19,7 @@ const LABELS = {
   google: 'Gemini',
   meta: 'Muse',
   deepseek: 'DeepSeek',
-  arbiter: 'BotBot',
+  arbiter: 'Grok (API)',
 };
 
 export function redact(text, secret) {

@@ -409,6 +409,40 @@ input, textarea {
   margin-bottom: 16px;
   color: var(--fg-secondary);
 }
+.empty-keys p { margin: 0; }
+.empty-keys-title {
+  margin: 0 0 6px !important;
+  color: var(--royal);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.keys-nudge {
+  width: min(1100px, calc(100% - 32px));
+  margin: 0 auto 10px;
+  padding: 10px 14px;
+  border: 1px dashed rgba(228, 179, 99, 0.4);
+  border-radius: 14px;
+  background: rgba(228, 179, 99, 0.06);
+  color: var(--fg-secondary);
+  font-size: 13px;
+}
+.keys-nudge[hidden] { display: none; }
+.keys-nudge p { margin: 0; line-height: 1.45; }
+button.linkish {
+  display: inline;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--royal);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 .key-row { grid-template-columns: 1fr; align-items: center; }
 .key-row small, .key-row em { display: block; color: var(--fg-muted); font-style: normal; }
 @media (min-width: 720px) {

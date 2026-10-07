@@ -87,13 +87,20 @@ function tableHtml(state, roster) {
       data-seat="${seat.id}"
       ${action ? `data-action="${action}"` : ''}
       ${tag === 'button' ? `type="button" aria-label="${escapeHtml(label)}" aria-pressed="${enabled ? 'true' : 'false'}"` : `role="img" aria-label="${escapeHtml(label)}"`}
-    ><span class="seat-glyph">${escapeHtml(markGlyph(seat))}</span><span class="seat-name">${escapeHtml(seat.role === 'king' ? seat.name : seat.name.replace(/Bot$/, ''))}</span></${tag}>`;
+    ><span class="seat-glyph">${escapeHtml(markGlyph(seat))}</span><span class="seat-name">${escapeHtml(seat.role === 'king' ? seat.name : seatShortName(seat))}</span></${tag}>`;
   }).join('');
   return `<div class="table-layer" data-mode="${mode}" data-testid="round-table" data-dock="${mode === 'dock' ? 'true' : 'false'}">
     <div class="ring"></div>
     ${center}
     ${seatHtml}
   </div>`;
+}
+
+function seatShortName(seat) {
+  if (!seat?.name) return '';
+  // Keep parenthetical API labels intact; strip a trailing "Bot" from CodexBot-style names.
+  if (/\([^)]+\)$/.test(seat.name)) return seat.name;
+  return seat.name.replace(/\s*Bot$/, '');
 }
 
 function proposalHtml(proposal, roster, arbiterName) {
@@ -181,7 +188,7 @@ function panelHtml(state, roster, secrets) {
   } else if (phase === 'proposal' && state.phase.status === 'error') {
     actions = `<p class="warn">${escapeHtml(state.phase.error || 'Drafting failed.')}</p><button type="button" class="primary" data-action="retry-proposal">Retry</button>`;
   } else if (phase === 'proposal' && state.phase.status === 'drafting') {
-    actions = `<p class="muted">${escapeHtml(arbiter?.name || 'BotBot')} is drafting the split.</p>`;
+    actions = `<p class="muted">${escapeHtml(arbiter?.name || 'Grok (API)')} is drafting the split.</p>`;
   } else if (phase === 'voting') {
     actions = `<p data-testid="tally">${score.pending ? `${score.agree + score.disagree} of ${score.agree + score.disagree + score.pending + score.failed} votes in` : `${score.agree} agree · ${score.disagree} disagree`}${state.phase.stalled ? ' · divided' : ''}</p>`;
     if (state.phase.stalled) {
@@ -196,11 +203,11 @@ function panelHtml(state, roster, secrets) {
   }
   const revision = phase === 'ready'
     ? `<label class="revision">Note for a revision
-        <input data-testid="revision-note" maxlength="400" placeholder="Optional note for ${escapeHtml(arbiter?.name || 'BotBot')}" />
+        <input data-testid="revision-note" maxlength="400" placeholder="Optional note for ${escapeHtml(arbiter?.name || 'Grok (API)')}" />
       </label>`
     : '';
   return `<div class="planning-scroll"><ul class="feed" data-testid="planning-feed">${feed}</ul>
-    ${proposalHtml(proposal, roster, arbiter?.name || 'BotBot')}
+    ${proposalHtml(proposal, roster, arbiter?.name || 'Grok (API)')}
     ${revision}</div>
     <div class="planning-actions">${actions}</div>`;
 }
@@ -401,7 +408,8 @@ function mountSettings(root, model, roster) {
   root.innerHTML = `<div class="settings">
     <div class="settings-bar"><button type="button" class="ghost" data-action="close-settings">Back</button><h1>Settings</h1></div>
     <section class="empty-keys" data-testid="keys-empty" ${secretsEmpty(model.secrets) ? '' : 'hidden'}>
-      <p>No provider keys yet. The council can still preview a quest on this device. Add a key to speak through that seat.</p>
+      <p class="empty-keys-title">No API keys yet</p>
+      <p>That’s fine — you can still walk through a preview quest. When you are ready for live seats, paste a provider key below. The xAI field talks to Grok models over the API; it is not a Grok Bot assistant.</p>
     </section>
     <p class="fine" data-testid="arbiter-key-note">${escapeHtml(arbiterSettingsCopy(model.state, roster, model.secrets))}</p>
     <form data-testid="settings-form">
@@ -457,6 +465,9 @@ function mountApp(root, model, roster) {
         <button type="button" class="ghost" data-action="sign-out">Sign out</button>
       </div>
     </header>
+    <aside class="keys-nudge" data-testid="keys-nudge" ${secretsEmpty(model.secrets) ? '' : 'hidden'}>
+      <p>No API keys saved yet — the table can still preview a quest. Open <button type="button" class="linkish" data-action="settings">Settings</button> when you want a seat to speak live.</p>
+    </aside>
     <div class="stage-layout" data-testid="stage-layout">
       <div class="stage"><div class="table-slot"></div><div class="chat-scroll" data-testid="chat-panel"><div class="chat-inner"></div></div></div>
       <div class="status-strip" data-testid="status-strip" aria-live="polite"></div>
@@ -558,6 +569,8 @@ function updateApp(root, model, roster) {
   if (sub) sub.textContent = state.kingName;
   const chip = root.querySelector('[data-testid="mode-chip"]');
   if (chip) chip.textContent = modeLabel(model.secrets, state, roster);
+  const nudge = root.querySelector('[data-testid="keys-nudge"]');
+  if (nudge) nudge.hidden = !secretsEmpty(model.secrets);
   const sound = root.querySelector('[data-testid="sound-toggle"]');
   if (sound) {
     const label = model.sound ? 'Sound on' : 'Sound off';
