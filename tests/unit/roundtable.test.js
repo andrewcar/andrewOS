@@ -265,7 +265,7 @@ describe('round table council', () => {
     expect(live.every((request) => request.providerId === 'anthropic' && request.apiKey === 'sk-claude')).toBe(true);
   });
 
-  it('lets BotBot lead chat when BotBot is the arbiter', async () => {
+  it('lets the arbiter seat lead chat when it is the arbiter', async () => {
     const round = harness();
     let state = round.state;
     let n = 0;
@@ -286,10 +286,12 @@ describe('round table council', () => {
     await orchestrator.after({ type: 'VOTE_CALLED' });
     state = reduce(state, { type: 'IMPLEMENT' }, round.ctx);
     await orchestrator.after({ type: 'IMPLEMENT' });
+    const arbiterName = ROSTER.find((seat) => seat.id === 'botbot').name;
+    const codexName = ROSTER.find((seat) => seat.id === 'codex').name;
     const transcript = state.messages.map((message) => message.text).join('\n');
-    expect(transcript).toMatch(/BotBot: Plan approved/);
-    expect(transcript).toMatch(/BotBot is handing off to CodexBot/);
-    expect(state.messages.some((message) => message.seatId === 'botbot' && message.kind === 'chat' && /BotBot is handing off to CodexBot/.test(message.text))).toBe(true);
+    expect(transcript).toMatch(new RegExp(`${arbiterName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}: Plan approved`));
+    expect(transcript).toMatch(new RegExp(`${arbiterName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} is handing off to ${codexName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+    expect(state.messages.some((message) => message.seatId === 'botbot' && message.kind === 'chat' && message.text.includes(`${arbiterName} is handing off to ${codexName}`))).toBe(true);
     expect(transcript).not.toMatch(/^Handing off to/m);
   });
 

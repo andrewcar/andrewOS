@@ -1,0 +1,23 @@
+# Round Table connector API (Cloudflare Worker)
+# Local: wrangler dev -c workers/rt/wrangler.toml
+# Or without Wrangler: npm run rt:dev
+
+name = "round-table-connector"
+main = "src/index.js"
+compatibility_date = "2026-10-07"
+
+[observability]
+enabled = true
+
+[observability.traces]
+enabled = true
+
+# Optional durable store for session secrets / quests.
+# Create with: wrangler kv namespace create RT_KV
+# Then set id below and uncomment.
+# [[kv_namespaces]]
+# binding = "RT_KV"
+# id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# Required secret (set via `wrangler secret put RT_SESSION_SECRET` or .dev.vars):
+# RT_SESSION_SECRET — HMAC + AES-GCM key material (min 16 chars). Connector auth only.
