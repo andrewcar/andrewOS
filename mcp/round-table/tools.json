@@ -1,0 +1,101 @@
+{
+  "name": "round-table-connector",
+  "version": "1.0.0",
+  "description": "Round Table connector API tools for a primary Grok Bot. Seats are public API products (Grok (API), Codex, Claude, Gemini, Muse, DeepSeek) using caller-provided keys — not fleet bots or BotBot.",
+  "baseUrlEnv": "ROUND_TABLE_API_BASE",
+  "baseUrlDefault": "http://127.0.0.1:8787",
+  "auth": {
+    "type": "bearer",
+    "obtain": "POST /rt/v1/sessions",
+    "header": "Authorization: Bearer <accessToken>",
+    "note": "Connector session only — not fleet identity."
+  },
+  "tools": [
+    {
+      "name": "rt_health",
+      "description": "Check Round Table connector API health. Returns service status and an honesty note that API seats are not fleet bots.",
+      "method": "GET",
+      "path": "/rt/v1/health",
+      "auth": false,
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "rt_roster",
+      "description": "List Round Table seats: ids, public product display names (Grok (API), Codex, Claude, Gemini, Muse, DeepSeek), roles, and providerIds. No secrets.",
+      "method": "GET",
+      "path": "/rt/v1/roster",
+      "auth": false,
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "rt_set_secrets",
+      "description": "Store provider API keys for this connector session (encrypted at rest). Keys must be supplied via secure/hidden input — never echo key values in chat, logs, or tool results. Accepted providerIds: arbiter (xAI / Grok (API)), openai (Codex), anthropic (Claude), google (Gemini), meta (Muse), deepseek. Storing keys does not grant fleet identity.",
+      "method": "PUT",
+      "path": "/rt/v1/secrets",
+      "auth": true,
+      "secureInput": true,
+      "neverEcho": ["keys", "arbiter", "openai", "anthropic", "google", "meta", "deepseek"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "object",
+            "description": "Map of providerId → API key string. Use secure input; values are never returned.",
+            "additionalProperties": { "type": "string" }
+          }
+        },
+        "required": ["keys"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "rt_start_quest",
+      "description": "Create a Round Table quest from a goal. Runs a local preview arbiter split, or calls xAI via proxy when an arbiter key is stored. Returns quest id, status, proposal, and messages.",
+      "method": "POST",
+      "path": "/rt/v1/quests",
+      "auth": true,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "goal": {
+            "type": "string",
+            "description": "The quest goal / prompt for the council."
+          },
+          "enabledSeatIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional knight seat ids to include (e.g. codex, claude). Defaults to all knights."
+          }
+        },
+        "required": ["goal"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "rt_quest_status",
+      "description": "Fetch quest status, proposal, and messages so far by quest id.",
+      "method": "GET",
+      "path": "/rt/v1/quests/{id}",
+      "auth": true,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Quest id returned by rt_start_quest."
+          }
+        },
+        "required": ["id"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

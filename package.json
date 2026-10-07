@@ -9,7 +9,10 @@
     "postinstall": "playwright install chromium",
     "test": "vitest run",
     "test:ui": "playwright test",
-    "test:all": "npm test && npm run test:ui"
+    "test:all": "npm test && npm run test:ui",
+    "rt:dev": "node workers/rt/dev-server.js",
+    "rt:dev:wrangler": "wrangler dev -c workers/rt/wrangler.toml",
+    "test:rt": "vitest run tests/unit/rt-connector.test.js"
   },
   "dependencies": {
     "jquery.terminal": "^2.39.3",
@@ -19,6 +22,7 @@
     "@playwright/test": "^1.55.0",
     "pngjs": "^7.0.0",
     "serve": "^14.2.4",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "wrangler": "^4.40.0"
   }
 }

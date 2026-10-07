@@ -1,0 +1,2 @@
+# Copy to workers/rt/.dev.vars for `wrangler dev` (do not commit .dev.vars)
+RT_SESSION_SECRET=local-dev-session-secret-change-me
