@@ -57,7 +57,7 @@ function visibleSeats(state, roster) {
 
 function tableHtml(state, roster) {
   const mode = state.focus === 'chat' ? 'dock' : 'full';
-  const seats = layoutSeats(visibleSeats(state, roster));
+  const seats = layoutSeats(visibleSeats(state, roster), mode);
   const quest = state.phase.name === 'implementing';
   const center = mode === 'dock' || quest
     ? `<button type="button" class="medallion" data-action="toggle-focus" data-testid="table-center" aria-label="${mode === 'dock' ? 'Show the round table' : 'Return to chat'}">
@@ -87,7 +87,7 @@ function tableHtml(state, roster) {
       data-seat="${seat.id}"
       ${action ? `data-action="${action}"` : ''}
       ${tag === 'button' ? `type="button" aria-label="${escapeHtml(label)}" aria-pressed="${enabled ? 'true' : 'false'}"` : `role="img" aria-label="${escapeHtml(label)}"`}
-    ><span class="seat-glyph">${escapeHtml(markGlyph(seat))}</span><span class="seat-name">${escapeHtml(seat.role === 'king' ? seat.name : seatShortName(seat))}</span></${tag}>`;
+    ><span class="seat-glyph">${escapeHtml(markGlyph(seat))}</span><span class="seat-name">${escapeHtml(seatShortName(seat))}</span></${tag}>`;
   }).join('');
   return `<div class="table-layer" data-mode="${mode}" data-testid="round-table" data-dock="${mode === 'dock' ? 'true' : 'false'}">
     <div class="ring"></div>
@@ -96,11 +96,9 @@ function tableHtml(state, roster) {
   </div>`;
 }
 
+/** Display name for a seat label. Roster names are already product-facing. */
 function seatShortName(seat) {
-  if (!seat?.name) return '';
-  // Keep parenthetical API labels intact; strip a trailing "Bot" from CodexBot-style names.
-  if (/\([^)]+\)$/.test(seat.name)) return seat.name;
-  return seat.name.replace(/\s*Bot$/, '');
+  return seat?.name || '';
 }
 
 function proposalHtml(proposal, roster, arbiterName) {
@@ -409,7 +407,7 @@ function mountSettings(root, model, roster) {
     <div class="settings-bar"><button type="button" class="ghost" data-action="close-settings">Back</button><h1>Settings</h1></div>
     <section class="empty-keys" data-testid="keys-empty" ${secretsEmpty(model.secrets) ? '' : 'hidden'}>
       <p class="empty-keys-title">No API keys yet</p>
-      <p>That’s fine — you can still walk through a preview quest. When you are ready for live seats, paste a provider key below. The xAI field talks to Grok models over the API; it is not a Grok Bot assistant.</p>
+      <p>That’s fine — you can still walk through a preview quest. When you are ready for live seats, paste a provider key below. The xAI field talks to Grok models over the API — not a full assistant with tools or memory.</p>
     </section>
     <p class="fine" data-testid="arbiter-key-note">${escapeHtml(arbiterSettingsCopy(model.state, roster, model.secrets))}</p>
     <form data-testid="settings-form">
