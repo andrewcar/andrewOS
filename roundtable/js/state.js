@@ -53,7 +53,7 @@ export function createState({ now, sessionId, kingName, roster, arbiterId }) {
 
 /**
  * Knights who take a share. The chosen arbiter stays at 0% and leads chat.
- * BotBot is not given a share when another seat is arbiter.
+ * The default xAI / Grok (API) seat is not given a share when another seat is arbiter.
  */
 export function enabledKnights(state, roster) {
   const arbiterId = resolveArbiter(state, roster)?.id;
@@ -132,7 +132,7 @@ export function stripText(state, roster, now) {
   }
   if (active) return active;
   if (state.phase.name === 'proposal' && state.phase.status === 'drafting') {
-    return `${resolveArbiter(state, roster)?.name || 'BotBot'} · drafting`;
+    return `${resolveArbiter(state, roster)?.name || 'Grok (API)'} · drafting`;
   }
   if (state.phase.name === 'voting') return 'The council is weighing the split…';
   if (state.phase.name === 'implementing') return 'Live · the council is listening';

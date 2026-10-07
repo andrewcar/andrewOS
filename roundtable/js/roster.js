@@ -2,7 +2,7 @@
 
 export const ROSTER = [
   { id: 'king', name: 'You', role: 'king', providerId: 'human', accent: '#E7E9EF', mark: { kind: 'sigil', glyph: '♔' }, tagline: 'King', defaultEnabled: true, order: -1 },
-  { id: 'botbot', name: 'BotBot', role: 'arbiter', providerId: 'arbiter', accent: '#E4B363', mark: { kind: 'sigil', glyph: '⬡' }, tagline: 'Arbiter', defaultEnabled: true, order: -1 },
+  { id: 'botbot', name: 'Grok (API)', role: 'arbiter', providerId: 'arbiter', accent: '#E4B363', mark: { kind: 'sigil', glyph: '⬡' }, tagline: 'xAI', defaultEnabled: true, order: -1 },
   { id: 'codex', name: 'CodexBot', role: 'knight', providerId: 'openai', accent: '#10A37F', mark: { kind: 'initials', text: 'CX' }, tagline: 'OpenAI', defaultEnabled: true, order: 0 },
   { id: 'claude', name: 'ClaudeBot', role: 'knight', providerId: 'anthropic', accent: '#D4A27F', mark: { kind: 'initials', text: 'CL' }, tagline: 'Anthropic', defaultEnabled: true, order: 1 },
   { id: 'gemini', name: 'GeminiBot', role: 'knight', providerId: 'google', accent: '#4E8DF5', mark: { kind: 'initials', text: 'GM' }, tagline: 'Google Gemini', defaultEnabled: true, order: 2 },
@@ -16,7 +16,7 @@ export const PROVIDERS = [
   { id: 'google', label: 'Gemini', hint: 'Google AI Studio key', seatId: 'gemini' },
   { id: 'meta', label: 'Muse', hint: 'Muse key — stored only, no browser relay yet', seatId: 'muse' },
   { id: 'deepseek', label: 'DeepSeek', hint: 'DeepSeek API key', seatId: 'deepseek' },
-  { id: 'arbiter', label: 'BotBot', hint: 'Arbiter key (OpenAI-compatible)', seatId: 'botbot' },
+  { id: 'arbiter', label: 'xAI API', hint: 'xAI API key — talks to Grok models over the API. Not a Grok Bot assistant (no tools, memory, or fleet).', seatId: 'botbot' },
 ];
 
 export function knights(roster = ROSTER) {
