@@ -1,0 +1,5 @@
+# Keep MCP descriptors / connector README public; exclude junk only.
+.DS_Store
+**/.DS_Store
+.git
+**/.git

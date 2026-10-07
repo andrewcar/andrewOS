@@ -36,12 +36,9 @@ async function requireAuth(request, env) {
 export async function handleRequest(request, env, deps = {}) {
   const fetchImpl = deps.fetchImpl || globalThis.fetch;
   const url = new URL(request.url);
-  let pathname = url.pathname;
+  const pathname = url.pathname;
 
-  // Allow mounting at root or under a host that already strips a prefix.
-  if (pathname === '/' || pathname === '') {
-    pathname = `${API_PREFIX}/health`;
-  }
+  // `/` is the static UI (Workers assets). API lives under /rt/v1/* only.
 
   if (request.method === 'OPTIONS') {
     return noContent();

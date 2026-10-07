@@ -9,6 +9,8 @@ playwright/.cache/
 
 .cursor/debug-*.log
 
-# Round Table connector local secrets
+# Round Table connector local secrets / wrangler state
 workers/rt/.dev.vars
 .dev.vars
+.wrangler/
+workers/rt/.wrangler/

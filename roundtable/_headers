@@ -1,0 +1,14 @@
+# Cloudflare Workers Static Assets headers (when roundtable/ is the assets root).
+# Repo-level /_headers still covers andrewos.com/roundtable on GitHub Pages.
+
+/
+  Cache-Control: no-cache
+
+/index.html
+  Cache-Control: no-cache
+
+/js/*
+  Cache-Control: no-cache
+
+/styles.css
+  Cache-Control: no-cache
