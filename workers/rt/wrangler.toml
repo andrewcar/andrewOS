@@ -1,12 +1,37 @@
-# Round Table connector API (Cloudflare Worker)
+# Round Table connector API + static UI (Cloudflare Worker)
 # Local: wrangler dev -c workers/rt/wrangler.toml
-# Or without Wrangler: npm run rt:dev
+# Or API-only without Wrangler: npm run rt:dev
+#
+# Deploy (BotBot, after Andrew says merge): wrangler deploy -c workers/rt/wrangler.toml
+# Custom domains below are applied on deploy — no separate Pages project.
 
 name = "round-table-connector"
 main = "src/index.js"
 compatibility_date = "2026-10-07"
 workers_dev = true
 preview_urls = true
+
+# Custom domains (Worker is origin). Keep rt.andrewos.com so deploy does not drop the alias.
+[[routes]]
+pattern = "roundtable.lol"
+custom_domain = true
+
+[[routes]]
+pattern = "www.roundtable.lol"
+custom_domain = true
+
+[[routes]]
+pattern = "rt.andrewos.com"
+custom_domain = true
+
+# Public UI lives at repo roundtable/. Served as Workers Static Assets at the domain root.
+# run_worker_first = true so www→apex 301 runs before assets; Worker handles /rt/* then
+# delegates everything else to ASSETS (same outcome as Worker-first only on /rt/* for the API).
+[assets]
+directory = "../../roundtable"
+binding = "ASSETS"
+run_worker_first = true
+# No SPA fallback: app has no client path router; missing files should 404.
 
 [observability]
 enabled = true

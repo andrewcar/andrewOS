@@ -2,7 +2,9 @@
 
 HTTP API + MCP tool descriptors so a **primary Grok Bot** (assistant with tools/memory) can run a Round Table quest — not merely open [the public webpage](https://roundtable.lol).
 
-The public UI under `roundtable/` stays as-is (today also served at `https://andrewos.com/roundtable` on GitHub Pages). Canonical public home is **`https://roundtable.lol`**. After DNS/NS cutover (BotBot-owned; not this PR), `andrewos.com/roundtable` is expected to 301 to `roundtable.lol`. This connector is a parallel backend path.
+**Hosting:** Worker `round-table-connector` serves **both** the static UI (Workers Static Assets from `roundtable/` at the domain root) and the API under `/rt/v1/*`. Canonical public home is **`https://roundtable.lol`**. Custom domains in `workers/rt/wrangler.toml`: `roundtable.lol`, `www.roundtable.lol` (301 → apex in Worker), and `rt.andrewos.com` (kept as an alias). No Cloudflare Pages project.
+
+During transition, the same UI still loads at `https://andrewos.com/roundtable` (GitHub Pages). Because andrewos.com is DNS-only GH Pages, cutover uses an **early client-side redirect** in `roundtable/index.html` (andrewos.com hosts only) — not a Cloudflare 301.
 
 ## Honesty (read this)
 
@@ -49,9 +51,10 @@ From the repo root:
 # Node (no Cloudflare account needed)
 RT_SESSION_SECRET=local-dev-session-secret-change-me npm run rt:dev
 
-# Or Wrangler
+# Or Wrangler (API + static UI assets)
 cp workers/rt/.dev.vars.example workers/rt/.dev.vars
 npx wrangler dev -c workers/rt/wrangler.toml
+# → UI at http://127.0.0.1:8787/  ·  API at http://127.0.0.1:8787/rt/v1/health
 ```
 
 Smoke:
@@ -60,6 +63,7 @@ Smoke:
 curl -s http://127.0.0.1:8787/rt/v1/health
 curl -s http://127.0.0.1:8787/rt/v1/roster
 curl -s -X POST http://127.0.0.1:8787/rt/v1/sessions
+# With wrangler dev, also: curl -sI http://127.0.0.1:8787/  (HTML UI)
 ```
 
 ## Production BASE_URL
@@ -72,7 +76,9 @@ https://roundtable.lol
 
 Example: `GET https://roundtable.lol/rt/v1/...` (e.g. `GET https://roundtable.lol/rt/v1/health`)
 
-**DNS / routing status:** `roundtable.lol` was purchased; nameservers and Cloudflare zone/Worker custom-domain routing for `roundtable.lol/rt/*` are **BotBot-owned and not live in this PR**. Until Cloudflare routes `roundtable.lol/rt/*` to the connector Worker, clients may temporarily fall back to:
+UI: `https://roundtable.lol/` (same Worker; static assets). `www.roundtable.lol` 301s to the apex.
+
+**Cutover / deploy:** Andrew approved full cutover. This PR is still **Merge/Hold** — BotBot deploys with `wrangler deploy -c workers/rt/wrangler.toml` after Andrew says merge. Custom domains are declared in `wrangler.toml` (no separate Pages or route steps beyond that). Until deploy, `workers.dev` remains a temporary fallback:
 
 ```text
 https://round-table-connector.andrew-carvajal.workers.dev
@@ -80,7 +86,7 @@ https://round-table-connector.andrew-carvajal.workers.dev
 
 Example fallback: `GET https://round-table-connector.andrew-carvajal.workers.dev/rt/v1/health`
 
-Override with `ROUND_TABLE_API_BASE` when needed (e.g. point at workers.dev until cutover). Local `npm run rt:dev` still uses `http://127.0.0.1:8787`.
+Override with `ROUND_TABLE_API_BASE` when needed (e.g. point at workers.dev until cutover). Local `npm run rt:dev` still uses `http://127.0.0.1:8787` (API only; no static assets).
 
 ## Grok Bot / MCP install
 

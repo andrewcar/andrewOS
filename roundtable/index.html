@@ -5,21 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Round Table</title>
   <meta name="description" content="Convene a council of models. Set the job, approve the split, then work the quest in chat." />
-  <link rel="icon" href="/favicon.png" />
+  <link rel="canonical" href="https://roundtable.lol/" />
+  <link rel="icon" href="./favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@450;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./styles.css?v=6" />
+  <link rel="stylesheet" href="./styles.css?v=7" />
   <!--
-    Canonical public home: https://roundtable.lol
-    TODO (post-cutover, BotBot/Andrew): attach a 301 on andrewos.com/roundtable → https://roundtable.lol
-    via Cloudflare. Do NOT hard client-redirect here until DNS is ready — that would break the live
-    GitHub Pages host and local file:// / relative opens.
+    Canonical public home: https://roundtable.lol (Worker static assets at domain root).
+    andrewos.com is DNS-only GitHub Pages — BotBot cannot attach a CF 301 there.
+    Early client redirect below (andrewos.com / www.andrewos.com only; never localhost/tests).
+    Logic mirrored in js/canonical-home.js for unit tests.
   -->
+  <script>
+    (function () {
+      var host = location.hostname;
+      if (host !== 'andrewos.com' && host !== 'www.andrewos.com') return;
+      var path = location.pathname || '/';
+      var match = path.match(/^\/roundtable(\/.*)?$/i);
+      var rest = match ? (match[1] || '/') : '/';
+      location.replace('https://roundtable.lol' + rest + location.search + location.hash);
+    })();
+  </script>
 </head>
 <body>
   <div id="app"></div>
   <noscript>Round Table needs JavaScript.</noscript>
-  <script type="module" src="./js/app.js?v=6"></script>
+  <script type="module" src="./js/app.js?v=7"></script>
 </body>
 </html>

@@ -1,6 +1,22 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('round table', () => {
+  test('serves root-safe assets under /roundtable/', async ({ page }) => {
+    const pageRes = await page.goto('/roundtable/');
+    expect(pageRes?.ok()).toBeTruthy();
+    await expect(page).toHaveTitle('Round Table');
+    const favicon = await page.request.get('/roundtable/favicon.png');
+    expect(favicon.ok()).toBeTruthy();
+    const css = await page.request.get('/roundtable/styles.css?v=7');
+    expect(css.ok()).toBeTruthy();
+    const js = await page.request.get('/roundtable/js/app.js?v=7');
+    expect(js.ok()).toBeTruthy();
+    const html = await page.content();
+    expect(html).toContain('rel="canonical"');
+    expect(html).toContain('./favicon.png');
+    expect(html).not.toContain('href="/favicon.png"');
+  });
+
   test('plans in view of the table, then docks chat at top center', async ({ page }, testInfo) => {
     test.setTimeout(60_000);
     await page.goto('/roundtable/');
