@@ -220,7 +220,7 @@ test.describe('round table', () => {
     await expect(settingsUnlock).toContainText('Enter your password to unlock key storage');
     await expect(page.locator('#app')).not.toContainText(/BotBot|___Bot/);
 
-    const openai = page.locator('[data-provider="openai"]');
+    const openai = page.locator('input[data-provider="openai"]');
     await openai.fill(firstKey);
     await page.getByTestId('settings-save').click();
     await expect(page.locator('[data-settings-note]')).toHaveText('Enter your password to unlock key storage.');
@@ -260,7 +260,7 @@ test.describe('round table', () => {
     await expect(page.locator('[data-settings-note]')).toHaveText('Saved keys are locked. Enter your password to unlock key storage.');
     await expect(page.getByTestId('arbiter-key-note')).toContainText('Enter your password to unlock key storage');
     await expect(page.locator('[data-key-state="openai"]')).toHaveText('Not set');
-    await page.locator('[data-provider="anthropic"]').fill(secondKey);
+    await page.locator('input[data-provider="anthropic"]').fill(secondKey);
     await page.getByTestId('settings-password').fill(password);
     await page.getByTestId('settings-save').click();
     await expect(page.locator('[data-key-state="openai"]')).toHaveText('Saved on this device', { timeout: 20_000 });
