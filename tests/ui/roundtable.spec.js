@@ -11,14 +11,14 @@ test.describe('round table', () => {
     expect(png.ok()).toBeTruthy();
     const manifest = await page.request.get('/roundtable/site.webmanifest');
     expect(manifest.ok()).toBeTruthy();
-    const css = await page.request.get('/roundtable/styles.css?v=9');
+    const css = await page.request.get('/roundtable/styles.css?v=10');
     expect(css.ok()).toBeTruthy();
-    const js = await page.request.get('/roundtable/js/app.js?v=9');
+    const js = await page.request.get('/roundtable/js/app.js?v=10');
     expect(js.ok()).toBeTruthy();
     const html = await page.content();
     expect(html).toContain('rel="canonical"');
-    expect(html).toContain('./favicon.svg?v=9');
-    expect(html).toContain('./favicon.png?v=9');
+    expect(html).toContain('./favicon.svg?v=10');
+    expect(html).toContain('./favicon.png?v=10');
     expect(html).not.toContain('href="/favicon.png"');
   });
 
@@ -218,7 +218,8 @@ test.describe('round table', () => {
     const settingsUnlock = page.getByTestId('settings-unlock');
     await expect(settingsUnlock).toBeVisible();
     await expect(settingsUnlock).toContainText('Enter your password to unlock key storage');
-    await expect(page.locator('#app')).not.toContainText(/BotBot|___Bot/);
+    await expect(page.locator('#app')).not.toContainText(/Hearth|BotBot|___Bot|relay\.andrewos\.com/);
+    await expect(page.locator('a[href*="relay.andrewos.com"]')).toHaveCount(0);
 
     const openai = page.locator('input[data-provider="openai"]');
     await openai.fill(firstKey);
