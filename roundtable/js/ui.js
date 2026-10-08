@@ -427,7 +427,6 @@ function mountSettings(root, model, roster) {
     </form>
     <label class="sound-line"><input type="checkbox" data-action="sound-pref" ${model.sound ? 'checked' : ''} /> Seat sounds</label>
     <p class="fine">Keys are encrypted with AES-GCM before they are stored on this device. They are not logged and they are not written into the site source. Calls go to the provider, or the seat shows a blocked status if the browser cannot reach them.</p>
-    <p class="fine"><a href="https://relay.andrewos.com/admin/login?next=/roundtable">Hearth admin relay</a></p>
   </div>`;
   const settings = root.querySelector('.settings');
   settings.querySelector('[data-testid="settings-form"]').addEventListener('submit', (event) => {

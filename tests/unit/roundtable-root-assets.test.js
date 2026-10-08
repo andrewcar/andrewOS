@@ -52,10 +52,10 @@ describe('roundtable static root serve', () => {
       }
       const html = await (await fetch(`${BASE}/`)).text();
       expect(html).toContain('Round Table');
-      expect(html).toContain('./favicon.svg?v=9');
-      expect(html).toContain('./favicon.png?v=9');
+      expect(html).toContain('./favicon.svg?v=10');
+      expect(html).toContain('./favicon.png?v=10');
       expect(html).not.toContain('href="/favicon.png"');
-      expect(html).toContain('?v=9');
+      expect(html).toContain('?v=10');
     } finally {
       child.kill('SIGTERM');
       await sleep(50);
