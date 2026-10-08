@@ -423,6 +423,7 @@ input, textarea {
   margin-bottom: 16px;
   color: var(--fg-secondary);
 }
+.empty-keys[hidden] { display: none; }
 .empty-keys p { margin: 0; }
 .empty-keys-title {
   margin: 0 0 6px !important;
@@ -432,6 +433,14 @@ input, textarea {
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
+.key-unlock {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid rgba(228, 179, 99, 0.45);
+  border-radius: 12px;
+  background: rgba(228, 179, 99, 0.06);
+}
+.key-unlock[hidden] { display: none; }
 .keys-nudge {
   width: min(1100px, calc(100% - 32px));
   margin: 0 auto 10px;

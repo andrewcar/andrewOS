@@ -1,3 +1,4 @@
+import { KEY_UNLOCK_PROMPT } from './key-storage.js';
 import { PROVIDERS, knights, layoutSeats, markGlyph, presentRoster, seatById } from './roster.js';
 import { currentTally, dockSeatIds, enabledKnights, isBusy, latestProposal, resolveArbiter, stripText } from './state.js';
 
@@ -142,9 +143,12 @@ function arbiterControl(state, roster, secrets) {
     <p class="muted" data-testid="arbiter-note">${escapeHtml(arbiterCopy(state, roster, secrets))}</p>`;
 }
 
-export function arbiterSettingsCopy(state, roster, secrets) {
+export function arbiterSettingsCopy(state, roster, secrets, locked = false) {
   const seat = resolveArbiter(state, roster);
   if (!seat) return '';
+  if (locked && !secrets?.[seat.providerId]) {
+    return `${seat.name} is the arbiter. Saved keys are locked. Enter your password to unlock key storage.`;
+  }
   if (!secrets?.[seat.providerId]) {
     return `${seat.name} is the arbiter and has no key yet. Add that seat's key, or the quest stays on a local preview.`;
   }
@@ -340,9 +344,7 @@ export function sync(root, model, roster) {
     return;
   }
   if (model.screen === 'settings') {
-    const note = root.querySelector('[data-settings-note]');
-    if (note) note.textContent = model.settingsNote || '';
-    paintKeyState(root, model, roster);
+    paintSettings(root, model, roster);
     return;
   }
   updateApp(root, model, roster);
@@ -399,24 +401,29 @@ function applyAuthMode(root, mode) {
 
 function mountSettings(root, model, roster) {
   const rows = PROVIDERS.map((provider) => `<label class="key-row">
-      <span><strong>${escapeHtml(provider.label)}</strong><small>${escapeHtml(provider.hint)}</small><em data-key-state="${provider.id}">${model.secrets?.[provider.id] ? 'Saved on this device' : 'Not set'}</em></span>
-      <input type="password" data-provider="${provider.id}" autocomplete="off" spellcheck="false" placeholder="${model.secrets?.[provider.id] ? 'Saved · enter a new key to replace' : 'Not set'}" />
+      <span><strong>${escapeHtml(provider.label)}</strong><small>${escapeHtml(provider.hint)}</small><em data-key-state="${provider.id}">${keyStateLabel(model, provider.id)}</em></span>
+      <input type="password" data-provider="${provider.id}" autocomplete="off" spellcheck="false" placeholder="${escapeHtml(keyPlaceholder(model, provider.id))}" />
       <button type="button" class="ghost" data-action="remove-key" data-provider="${provider.id}">Remove</button>
     </label>`).join('');
+  const noteClass = model.settingsNoteKind === 'error' ? 'muted warn' : 'muted';
   root.innerHTML = `<div class="settings">
     <div class="settings-bar"><button type="button" class="ghost" data-action="close-settings">Back</button><h1>Settings</h1></div>
-    <section class="empty-keys" data-testid="keys-empty" ${secretsEmpty(model.secrets) ? '' : 'hidden'}>
+    <section class="empty-keys" data-testid="keys-empty" ${secretsEmpty(model.secrets) && !model.locked ? '' : 'hidden'}>
       <p class="empty-keys-title">No API keys yet</p>
       <p>That’s fine — you can still walk through a preview quest. When you are ready for live seats, paste a provider key below. The xAI field talks to Grok models over the API — not a full assistant with tools or memory.</p>
     </section>
-    <p class="fine" data-testid="arbiter-key-note">${escapeHtml(arbiterSettingsCopy(model.state, roster, model.secrets))}</p>
-    <form data-testid="settings-form">
+    <p class="fine" data-testid="arbiter-key-note">${escapeHtml(arbiterSettingsCopy(model.state, roster, model.secrets, model.locked))}</p>
+    <form data-testid="settings-form" aria-busy="${model.keysPending ? 'true' : 'false'}">
+      <label class="key-unlock" data-testid="settings-unlock" ${model.aesKey ? 'hidden' : ''}>
+        ${escapeHtml(KEY_UNLOCK_PROMPT)}
+        <input type="password" autocomplete="current-password" spellcheck="false" data-testid="settings-password" aria-describedby="settings-note" />
+      </label>
       ${rows}
       <div class="row">
-        <button type="submit" class="primary">Save keys</button>
+        <button type="submit" class="primary" data-testid="settings-save" ${model.keysPending ? 'disabled' : ''}>Save keys</button>
         <button type="button" class="ghost" data-action="clear-keys">Remove all keys</button>
       </div>
-      <p class="muted" data-settings-note>${escapeHtml(model.settingsNote || '')}</p>
+      <p class="${noteClass}" id="settings-note" data-settings-note aria-live="polite">${escapeHtml(model.settingsNote || '')}</p>
     </form>
     <label class="sound-line"><input type="checkbox" data-action="sound-pref" ${model.sound ? 'checked' : ''} /> Seat sounds</label>
     <p class="fine">Keys are encrypted with AES-GCM before they are stored on this device. They are not logged and they are not written into the site source. Calls go to the provider, or the seat shows a blocked status if the browser cannot reach them.</p>
@@ -440,15 +447,47 @@ function mountSettings(root, model, roster) {
   void roster;
 }
 
+function keyStateLabel(model, providerId) {
+  return model.secrets?.[providerId] ? 'Saved on this device' : 'Not set';
+}
+
+function keyPlaceholder(model, providerId) {
+  return model.secrets?.[providerId] ? 'Saved · enter a new key to replace' : 'Not set';
+}
+
+function paintSettings(root, model, roster) {
+  const note = root.querySelector('[data-settings-note]');
+  if (note) {
+    note.textContent = model.settingsNote || '';
+    note.classList.toggle('warn', model.settingsNoteKind === 'error');
+  }
+  const unlock = root.querySelector('[data-testid="settings-unlock"]');
+  if (unlock) unlock.hidden = Boolean(model.aesKey);
+  const passwordInput = root.querySelector('[data-testid="settings-password"]');
+  if (passwordInput) passwordInput.setAttribute('aria-invalid', model.settingsNoteKind === 'error' ? 'true' : 'false');
+  const save = root.querySelector('[data-testid="settings-save"]');
+  if (save) save.disabled = Boolean(model.keysPending);
+  root.querySelectorAll('[data-action="remove-key"], [data-action="clear-keys"]').forEach((button) => {
+    button.disabled = Boolean(model.keysPending);
+  });
+  const form = root.querySelector('[data-testid="settings-form"]');
+  if (form) form.setAttribute('aria-busy', model.keysPending ? 'true' : 'false');
+  paintKeyState(root, model, roster);
+}
+
 function paintKeyState(root, model, roster) {
   const secrets = model.secrets;
   root.querySelectorAll('[data-key-state]').forEach((node) => {
-    node.textContent = secrets?.[node.dataset.keyState] ? 'Saved on this device' : 'Not set';
+    node.textContent = keyStateLabel(model, node.dataset.keyState);
+  });
+  root.querySelectorAll('[data-provider]').forEach((input) => {
+    if (document.activeElement === input) return;
+    input.placeholder = keyPlaceholder(model, input.dataset.provider);
   });
   const empty = root.querySelector('[data-testid="keys-empty"]');
-  if (empty) empty.hidden = !secretsEmpty(secrets);
+  if (empty) empty.hidden = model.locked || !secretsEmpty(secrets);
   const note = root.querySelector('[data-testid="arbiter-key-note"]');
-  if (note) note.textContent = arbiterSettingsCopy(model.state, roster, secrets);
+  if (note) note.textContent = arbiterSettingsCopy(model.state, roster, secrets, model.locked);
 }
 
 function mountApp(root, model, roster) {
