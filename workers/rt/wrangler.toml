@@ -48,3 +48,7 @@ enabled = true
 
 # Required secret (set via `wrangler secret put RT_SESSION_SECRET` or .dev.vars):
 # RT_SESSION_SECRET — HMAC + AES-GCM key material (min 16 chars). Connector auth only.
+#
+# RT_ARBITER_WEBHOOK is intentionally unset. Arbiter webhook delivery and the
+# callback stay off until this is "1" or "true" (dashboard var or .dev.vars).
+# Do not enable it in this file.

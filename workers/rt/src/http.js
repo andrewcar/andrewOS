@@ -1,7 +1,8 @@
 const CORS_HEADERS = {
   'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'GET, POST, PUT, OPTIONS',
-  'access-control-allow-headers': 'authorization, content-type',
+  'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'access-control-allow-headers': 'authorization, content-type, accept, mcp-protocol-version, mcp-session-id',
+  'access-control-expose-headers': 'mcp-session-id',
   'access-control-max-age': '86400',
 };
 
@@ -18,6 +19,10 @@ export function json(status, body, extraHeaders = {}) {
 
 export function noContent() {
   return new Response(null, { status: 204, headers: { ...CORS_HEADERS } });
+}
+
+export function accepted() {
+  return new Response(null, { status: 202, headers: { ...CORS_HEADERS } });
 }
 
 export async function readJson(request) {

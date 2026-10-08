@@ -307,5 +307,7 @@ describe('rt health', () => {
     expect(json.ok).toBe(true);
     expect(json.honesty).toMatch(/does not make them fleet/i);
     expect(json.honesty).not.toMatch(/___Bot/);
+    expect(json.honesty).not.toMatch(/botbot/i);
+    expect(json.honesty).not.toMatch(/grok bot/i);
   });
 });
