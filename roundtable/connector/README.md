@@ -1,6 +1,10 @@
 # Round Table connector (slice 1)
 
-HTTP API + MCP tool descriptors so a **primary Grok Bot** (assistant with tools/memory) can run a Round Table quest — not merely open [the public webpage](https://roundtable.lol).
+HTTP API plus a Streamable HTTP MCP server so Grok can run a Round Table quest from a connector — not merely open [the public webpage](https://roundtable.lol).
+
+**Connect URL (after deploy):** `https://roundtable.lol/rt/v1/mcp`
+
+Short connect steps, tools, and auth: [`CONNECT.md`](./CONNECT.md).
 
 **Hosting:** Worker `round-table-connector` serves **both** the static UI (Workers Static Assets from `roundtable/` at the domain root) and the API under `/rt/v1/*`. Canonical public home is **`https://roundtable.lol`**. Custom domains in `workers/rt/wrangler.toml`: `roundtable.lol`, `www.roundtable.lol` (301 → apex in Worker), and `rt.andrewos.com` (kept as an alias). No Cloudflare Pages project.
 
@@ -8,7 +12,7 @@ During transition, the same UI still loads at `https://andrewos.com/roundtable` 
 
 ## Honesty (read this)
 
-Storing or proxying a user’s **device / xAI / OpenAI API keys does not make those seats BotBot or private fleet bots**.
+Storing or proxying a caller’s provider API keys does not turn those seats into a private assistant or a hosted fleet.
 
 Connector seats are **API product seats** only:
 
@@ -21,7 +25,7 @@ Connector seats are **API product seats** only:
 | `muse`    | Muse         | `meta` |
 | `deepseek`| DeepSeek     | `deepseek` |
 
-Never treat connector docs or tool descriptions as fleet identity. Public product names only — not `___Bot` / BotBot branding for the caller.
+Public product names only: Grok, Codex, Claude, Gemini, Muse, DeepSeek.
 
 ## What works in slice 1
 
@@ -78,7 +82,7 @@ Example: `GET https://roundtable.lol/rt/v1/...` (e.g. `GET https://roundtable.lo
 
 UI: `https://roundtable.lol/` (same Worker; static assets). `www.roundtable.lol` 301s to the apex.
 
-**Cutover / deploy:** Andrew approved full cutover. This PR is still **Merge/Hold** — BotBot deploys with `wrangler deploy -c workers/rt/wrangler.toml` after Andrew says merge. Custom domains are declared in `wrangler.toml` (no separate Pages or route steps beyond that). Until deploy, `workers.dev` remains a temporary fallback:
+**Cutover / deploy:** Andrew approved full cutover. This change stays **Merge/Hold** — deploy with `wrangler deploy -c workers/rt/wrangler.toml` after Andrew says merge. Custom domains are declared in `wrangler.toml` (no separate Pages or route steps beyond that). Until deploy, `workers.dev` remains a temporary fallback:
 
 ```text
 https://round-table-connector.andrew-carvajal.workers.dev
@@ -88,11 +92,13 @@ Example fallback: `GET https://round-table-connector.andrew-carvajal.workers.dev
 
 Override with `ROUND_TABLE_API_BASE` when needed (e.g. point at workers.dev until cutover). Local `npm run rt:dev` still uses `http://127.0.0.1:8787` (API only; no static assets).
 
-## Grok Bot / MCP install
+## MCP install
 
-1. Point clients at the production `BASE_URL` above (or local `http://127.0.0.1:8787` while developing). Defaults live in [`mcp-tools.json`](./mcp-tools.json) / [`../../mcp/round-table/tools.json`](../../mcp/round-table/tools.json).
-2. Point the MCP client at [`mcp-tools.json`](./mcp-tools.json) (also mirrored under [`../../mcp/round-table/`](../../mcp/round-table/)).
-3. Flow a primary Grok Bot should use:
+Live endpoint (Streamable HTTP): `https://roundtable.lol/rt/v1/mcp` (alias `/mcp`). See [`CONNECT.md`](./CONNECT.md) for the URL to paste, bearer auth, and the tool list.
+
+[`mcp-tools.json`](./mcp-tools.json) (mirrored under [`../../mcp/round-table/`](../../mcp/round-table/)) still describes the underlying HTTP operations. The Worker is what Grok should connect to.
+
+Flow:
    1. `rt_health` — confirm the API is up
    2. `rt_roster` — list seats
    3. Session is minted by the host (or call `POST /rt/v1/sessions`); keep the Bearer token

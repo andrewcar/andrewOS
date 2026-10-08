@@ -1,13 +1,28 @@
 /**
- * Connector auth: short-lived HMAC bearer sessions.
- * This is NOT fleet identity — just a way for a Grok Bot (or other MCP client)
- * to call the Round Table HTTP API with user-supplied provider keys.
+ * Connector auth: HMAC bearer sessions for the Round Table HTTP API.
+ * Caller-supplied provider keys only — not a hosted identity.
  */
 
 import { hmacSign, hmacVerify, randomId } from './crypto-util.js';
 import { sessionIndexKey } from './store.js';
 
-const DEFAULT_TTL_MS = 60 * 60 * 1000; // 1 hour
+export const DEFAULT_TTL_MS = 60 * 60 * 1000; // 1 hour
+export const MIN_TTL_MS = 60 * 1000;
+export const MAX_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** ttlSeconds from a client body. Omitted means the 1 hour default. */
+export function resolveTtlMs(ttlSeconds) {
+  if (ttlSeconds == null || ttlSeconds === '') return { ok: true, ttlMs: DEFAULT_TTL_MS };
+  const n = Number(ttlSeconds);
+  if (!Number.isFinite(n)) return { ok: false, error: 'ttlSeconds must be a number' };
+  const ttlMs = Math.min(MAX_TTL_MS, Math.max(MIN_TTL_MS, Math.round(n * 1000)));
+  return { ok: true, ttlMs };
+}
+
+export function remainingTtlSeconds(expiresAt, now = Date.now()) {
+  if (!expiresAt) return Math.ceil(DEFAULT_TTL_MS / 1000);
+  return Math.max(60, Math.min(Math.ceil(MAX_TTL_MS / 1000), Math.ceil((expiresAt - now) / 1000)));
+}
 
 function requireSecret(env) {
   const secret = env?.RT_SESSION_SECRET;

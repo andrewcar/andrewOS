@@ -12,3 +12,10 @@
 
 /styles.css
   Cache-Control: no-cache
+
+/favicon.svg
+  Content-Type: image/svg+xml
+
+/site.webmanifest
+  Content-Type: application/manifest+json
+  Cache-Control: no-cache

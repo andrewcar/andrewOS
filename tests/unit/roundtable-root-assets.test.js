@@ -30,15 +30,32 @@ describe('roundtable static root serve', () => {
     );
     try {
       await waitForServer(`${BASE}/`);
-      const paths = ['/', '/favicon.png', '/styles.css', '/js/app.js', '/js/canonical-home.js'];
+      const paths = [
+        '/',
+        '/favicon.svg',
+        '/favicon.png',
+        '/favicon.ico',
+        '/favicon-16.png',
+        '/favicon-32.png',
+        '/apple-touch-icon.png',
+        '/icon-192.png',
+        '/icon-512.png',
+        '/icon-512-maskable.png',
+        '/site.webmanifest',
+        '/styles.css',
+        '/js/app.js',
+        '/js/canonical-home.js',
+      ];
       for (const path of paths) {
         const res = await fetch(`${BASE}${path}`);
         expect(res.status, path).toBe(200);
       }
       const html = await (await fetch(`${BASE}/`)).text();
       expect(html).toContain('Round Table');
-      expect(html).toContain('./favicon.png');
-      expect(html).toContain('?v=7');
+      expect(html).toContain('./favicon.svg?v=8');
+      expect(html).toContain('./favicon.png?v=8');
+      expect(html).not.toContain('href="/favicon.png"');
+      expect(html).toContain('?v=8');
     } finally {
       child.kill('SIGTERM');
       await sleep(50);

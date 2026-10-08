@@ -1,12 +1,12 @@
 /**
- * Cloudflare Worker entry: Round Table connector API (/rt/*) + static UI assets.
+ * Cloudflare Worker entry: Round Table connector API (/rt/* and /mcp) + static UI assets.
  */
 
 import { handleRequest } from './router.js';
 import { wwwToApexRedirect } from './www-redirect.js';
 
 function isApiPath(pathname) {
-  return pathname === '/rt' || pathname.startsWith('/rt/');
+  return pathname === '/rt' || pathname.startsWith('/rt/') || pathname === '/mcp';
 }
 
 export default {

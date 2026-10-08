@@ -29,10 +29,10 @@ describe('canonical home redirect helpers', () => {
       buildApexRedirectUrl({
         hostname: 'www.andrewos.com',
         pathname: '/roundtable/',
-        search: '?v=7',
+        search: '?v=8',
         hash: '#seats',
       }),
-    ).toBe(`${CANONICAL_ORIGIN}/?v=7#seats`);
+    ).toBe(`${CANONICAL_ORIGIN}/?v=8#seats`);
     expect(
       buildApexRedirectUrl({
         hostname: 'andrewos.com',
@@ -54,13 +54,18 @@ describe('canonical home redirect helpers', () => {
     ).toBeNull();
   });
 
-  it('index.html is root-safe and pins canonical + cache-bust v=7', () => {
+  it('index.html is root-safe and pins canonical + cache-bust v=8', () => {
     const html = readFileSync(resolve('roundtable/index.html'), 'utf8');
     expect(html).toContain('rel="canonical" href="https://roundtable.lol/"');
-    expect(html).toContain('href="./favicon.png"');
+    expect(html).toContain('href="./favicon.svg?v=8"');
+    expect(html).toContain('href="./favicon.png?v=8"');
+    expect(html).toContain('href="./site.webmanifest?v=8"');
+    expect(html).toContain('apple-touch-icon');
     expect(html).not.toContain('href="/favicon.png"');
-    expect(html).toContain('styles.css?v=7');
-    expect(html).toContain('app.js?v=7');
+    expect(html).not.toContain('href="/favicon.svg"');
+    expect(html).toContain('styles.css?v=8');
+    expect(html).toContain('app.js?v=8');
+    expect(html).not.toContain('?v=7');
     expect(html).toMatch(/location\.replace\(\s*['"]https:\/\/roundtable\.lol['"]/);
     expect(html).toMatch(/andrewos\.com/);
   });

@@ -5,15 +5,20 @@ test.describe('round table', () => {
     const pageRes = await page.goto('/roundtable/');
     expect(pageRes?.ok()).toBeTruthy();
     await expect(page).toHaveTitle('Round Table');
-    const favicon = await page.request.get('/roundtable/favicon.png');
+    const favicon = await page.request.get('/roundtable/favicon.svg');
     expect(favicon.ok()).toBeTruthy();
-    const css = await page.request.get('/roundtable/styles.css?v=7');
+    const png = await page.request.get('/roundtable/favicon.png');
+    expect(png.ok()).toBeTruthy();
+    const manifest = await page.request.get('/roundtable/site.webmanifest');
+    expect(manifest.ok()).toBeTruthy();
+    const css = await page.request.get('/roundtable/styles.css?v=8');
     expect(css.ok()).toBeTruthy();
-    const js = await page.request.get('/roundtable/js/app.js?v=7');
+    const js = await page.request.get('/roundtable/js/app.js?v=8');
     expect(js.ok()).toBeTruthy();
     const html = await page.content();
     expect(html).toContain('rel="canonical"');
-    expect(html).toContain('./favicon.png');
+    expect(html).toContain('./favicon.svg?v=8');
+    expect(html).toContain('./favicon.png?v=8');
     expect(html).not.toContain('href="/favicon.png"');
   });
 

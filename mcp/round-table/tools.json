@@ -1,9 +1,14 @@
 {
   "name": "round-table-connector",
   "version": "1.0.0",
-  "description": "Round Table connector API tools for a primary Grok Bot. Seats are public API products (Grok (API), Codex, Claude, Gemini, Muse, DeepSeek) using caller-provided keys — not fleet bots or BotBot.",
+  "description": "Round Table connector tools. Seats use caller-provided keys for Grok, Codex, Claude, Gemini, Muse, and DeepSeek.",
   "baseUrlEnv": "ROUND_TABLE_API_BASE",
   "baseUrlDefault": "https://roundtable.lol",
+  "mcp": {
+    "transport": "streamable-http",
+    "url": "https://roundtable.lol/rt/v1/mcp",
+    "alias": "https://roundtable.lol/mcp"
+  },
   "auth": {
     "type": "bearer",
     "obtain": "POST /rt/v1/sessions",

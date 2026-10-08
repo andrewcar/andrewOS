@@ -55,6 +55,7 @@ export async function createQuest(env, store, {
   enabledSeatIds,
   fetchImpl = globalThis.fetch,
   now = () => new Date().toISOString(),
+  ttlSeconds = 3600,
 } = {}) {
   const prompt = String(goal || '').trim();
   if (!prompt) {
@@ -152,29 +153,41 @@ export async function createQuest(env, store, {
     updatedAt: typeof now === 'function' ? now() : now,
   };
 
-  await store.put(questKey(questId), JSON.stringify(quest), { expirationTtl: 3600 });
+  await saveQuest(store, quest, { ttlSeconds });
   return { ok: true, status: 201, quest };
 }
 
-export async function getQuest(store, questId, sessionId) {
+export async function saveQuest(store, quest, { ttlSeconds = 3600 } = {}) {
+  await store.put(questKey(quest.id), JSON.stringify(quest), {
+    expirationTtl: Math.max(60, Number(ttlSeconds) || 3600),
+  });
+  return quest;
+}
+
+export async function readQuest(store, questId) {
   if (!questId) return { ok: false, status: 400, error: 'quest id required' };
   const raw = await store.get(questKey(questId));
   if (!raw) return { ok: false, status: 404, error: 'quest not found' };
-  let quest;
   try {
-    quest = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    const quest = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return { ok: true, status: 200, quest };
   } catch {
     return { ok: false, status: 500, error: 'corrupt quest record' };
   }
-  if (quest.sessionId !== sessionId) {
+}
+
+export async function getQuest(store, questId, sessionId) {
+  const result = await readQuest(store, questId);
+  if (!result.ok) return result;
+  if (result.quest.sessionId !== sessionId) {
     return { ok: false, status: 404, error: 'quest not found' };
   }
-  return { ok: true, status: 200, quest };
+  return result;
 }
 
 /** Public JSON shape for quest responses. */
 export function publicQuest(quest) {
-  return {
+  const body = {
     id: quest.id,
     goal: quest.goal,
     status: quest.status,
@@ -185,4 +198,20 @@ export function publicQuest(quest) {
     createdAt: quest.createdAt,
     updatedAt: quest.updatedAt,
   };
+  if (quest.arbiterDecision) {
+    body.arbiterDecision = {
+      source: 'webhook',
+      approach: quest.arbiterDecision.approach || '',
+      text: quest.arbiterDecision.text || '',
+      allocations: quest.arbiterDecision.allocations || null,
+      receivedAt: quest.arbiterDecision.receivedAt,
+    };
+  }
+  if (quest.arbiterWebhook?.status) {
+    body.arbiterWebhook = {
+      status: quest.arbiterWebhook.status,
+      ...(quest.arbiterWebhook.error ? { error: quest.arbiterWebhook.error } : {}),
+    };
+  }
+  return body;
 }

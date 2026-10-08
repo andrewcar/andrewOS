@@ -15,10 +15,10 @@ describe('www → apex redirect', () => {
   });
 
   it('301s www UI paths to apex', () => {
-    const request = new Request(`https://${WWW_HOST}/styles.css?v=7`);
+    const request = new Request(`https://${WWW_HOST}/styles.css?v=8`);
     const response = wwwToApexRedirect(request);
     expect(response.status).toBe(301);
-    expect(response.headers.get('Location')).toBe(`https://${APEX_HOST}/styles.css?v=7`);
+    expect(response.headers.get('Location')).toBe(`https://${APEX_HOST}/styles.css?v=8`);
   });
 
   it('does not redirect apex or other hosts', () => {
