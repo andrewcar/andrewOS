@@ -1,5 +1,16 @@
 import { createAudio } from './audio.js';
 import { arbiterStorageKey, createVault, questStorageKey } from './auth.js';
+import {
+  CHECKING_PASSWORD_NOTE,
+  KEY_REMOVED_NOTE,
+  KEY_UNLOCK_PROMPT,
+  KEYS_CLEARED_NOTE,
+  KEYS_LOCKED_NOTE,
+  collectKeyEdits,
+  removeProviderKey,
+  saveProviderKeys,
+  saveResultNote,
+} from './key-storage.js';
 import { createOrchestrator } from './orchestrator.js';
 import { ROSTER, seatById } from './roster.js';
 import { createState, isBusy, normalizeArbiterId, reduce } from './state.js';
@@ -34,6 +45,8 @@ const model = {
   authError: '',
   authPending: false,
   settingsNote: '',
+  settingsNoteKind: '',
+  keysPending: false,
   unlockError: '',
   armReset: false,
   account: null,
@@ -209,7 +222,8 @@ model.onAuth = async ({ mode, name, email, password }) => {
 
 model.onOpenSettings = () => {
   model.screen = 'settings';
-  model.settingsNote = model.locked ? 'Unlock from the table before replacing saved keys.' : '';
+  model.settingsNoteKind = '';
+  model.settingsNote = !model.aesKey && model.locked ? KEYS_LOCKED_NOTE : '';
   render(false);
 };
 
@@ -234,47 +248,101 @@ model.onSignOut = () => {
   model.locked = false;
   model.screen = 'auth';
   model.authError = '';
+  model.settingsNote = '';
+  model.settingsNoteKind = '';
+  model.keysPending = false;
+  model.unlockError = '';
   render(false);
 };
 
-model.onSaveKeys = async (form) => {
-  if (!model.aesKey) {
-    model.settingsNote = 'Unlock from the table before saving keys.';
-    render(false);
-    return;
-  }
-  const next = { ...model.secrets };
-  for (const input of form.querySelectorAll('[data-provider]')) {
-    const value = input.value.trim();
-    if (value) next[input.dataset.provider] = value;
+function readKeyForm() {
+  const form = document.querySelector('[data-testid="settings-form"]');
+  const password = form?.querySelector('[data-testid="settings-password"]')?.value ?? '';
+  const edits = collectKeyEdits(
+    [...(form?.querySelectorAll('[data-provider]') || [])].map((input) => [input.dataset.provider, input.value]),
+  );
+  return { form, password, edits };
+}
+
+function rememberKeys(result) {
+  model.aesKey = result.aesKey;
+  model.secrets = result.secrets;
+  model.locked = !result.aesKey && vault.hasSecrets(model.account.id);
+  model.unlockError = '';
+  model.settingsNoteKind = 'ok';
+}
+
+function clearKeyFields(form, { providers }) {
+  if (!form?.isConnected) return;
+  const passwordInput = form.querySelector('[data-testid="settings-password"]');
+  if (passwordInput) passwordInput.value = '';
+  if (!providers) return;
+  form.querySelectorAll('[data-provider]').forEach((input) => {
     input.value = '';
-  }
-  await vault.saveSecrets(model.account.id, model.aesKey, next);
-  model.secrets = next;
-  model.locked = false;
-  model.settingsNote = 'Saved. Keys stay encrypted on this device.';
-  render(false);
-};
+  });
+}
 
-model.onRemoveKey = async (providerId) => {
-  if (!model.aesKey) {
-    model.settingsNote = 'Unlock from the table before removing keys.';
+async function withKeyChange(work) {
+  if (model.keysPending || !model.account) return;
+  const snapshot = readKeyForm();
+  if (!model.aesKey && snapshot.password.length === 0) {
+    model.settingsNote = KEY_UNLOCK_PROMPT;
+    model.settingsNoteKind = 'error';
     render(false);
     return;
   }
-  const next = { ...model.secrets };
-  delete next[providerId];
-  await vault.saveSecrets(model.account.id, model.aesKey, next);
-  model.secrets = next;
-  model.settingsNote = 'Key removed from this device.';
+  model.keysPending = true;
+  if (!model.aesKey) {
+    model.settingsNote = CHECKING_PASSWORD_NOTE;
+    model.settingsNoteKind = '';
+  }
   render(false);
-};
+  try {
+    await work(snapshot);
+  } catch (error) {
+    model.settingsNote = error.message || 'Could not update keys.';
+    model.settingsNoteKind = 'error';
+  } finally {
+    model.keysPending = false;
+    render(false);
+  }
+}
+
+model.onSaveKeys = () => withKeyChange(async ({ form, password, edits }) => {
+  const result = await saveProviderKeys({
+    vault,
+    userId: model.account.id,
+    aesKey: model.aesKey,
+    secrets: model.secrets,
+    password,
+    edits,
+  });
+  rememberKeys(result);
+  model.settingsNote = saveResultNote(result);
+  clearKeyFields(form, { providers: true });
+});
+
+model.onRemoveKey = (providerId) => withKeyChange(async ({ form, password }) => {
+  const result = await removeProviderKey({
+    vault,
+    userId: model.account.id,
+    aesKey: model.aesKey,
+    secrets: model.secrets,
+    password,
+    providerId,
+  });
+  rememberKeys(result);
+  model.settingsNote = KEY_REMOVED_NOTE;
+  clearKeyFields(form, { providers: false });
+});
 
 model.onClearKeys = async () => {
-  if (!model.account) return;
+  if (!model.account || model.keysPending) return;
   await vault.clearSecrets(model.account.id);
   model.secrets = {};
-  model.settingsNote = 'All keys removed from this device.';
+  model.locked = false;
+  model.settingsNote = KEYS_CLEARED_NOTE;
+  model.settingsNoteKind = 'ok';
   render(false);
 };
 
@@ -285,6 +353,8 @@ model.onUnlock = async (password) => {
     model.secrets = result.secrets || {};
     model.locked = false;
     model.unlockError = '';
+    const input = document.querySelector('[data-testid="unlock-form"] input[name="password"]');
+    if (input) input.value = '';
     render(false);
   } catch (error) {
     model.unlockError = error.message || 'Could not unlock keys.';
@@ -366,6 +436,8 @@ setInterval(() => {
   paintStrip(root, model.state, ROSTER);
 }, 1000);
 
+// The session record is the account only. The password-derived AES key is
+// memory-only, so a reload has to unlock again before a key can change.
 const existing = vault.session();
 if (existing) {
   enter(

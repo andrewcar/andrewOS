@@ -11,14 +11,14 @@ test.describe('round table', () => {
     expect(png.ok()).toBeTruthy();
     const manifest = await page.request.get('/roundtable/site.webmanifest');
     expect(manifest.ok()).toBeTruthy();
-    const css = await page.request.get('/roundtable/styles.css?v=8');
+    const css = await page.request.get('/roundtable/styles.css?v=9');
     expect(css.ok()).toBeTruthy();
-    const js = await page.request.get('/roundtable/js/app.js?v=8');
+    const js = await page.request.get('/roundtable/js/app.js?v=9');
     expect(js.ok()).toBeTruthy();
     const html = await page.content();
     expect(html).toContain('rel="canonical"');
-    expect(html).toContain('./favicon.svg?v=8');
-    expect(html).toContain('./favicon.png?v=8');
+    expect(html).toContain('./favicon.svg?v=9');
+    expect(html).toContain('./favicon.png?v=9');
     expect(html).not.toContain('href="/favicon.png"');
   });
 
@@ -188,5 +188,126 @@ test.describe('round table', () => {
     await expect(chat).not.toContainText(/BotBot|CodexBot|ClaudeBot|GeminiBot|MuseBot|DeepSeekBot/);
     await expect(page.locator('.msg', { hasText: /Taking / }).first().locator('.seat-icon')).not.toHaveText('⬡');
     expect(page.url()).not.toContain('relay.andrewos.com');
+  });
+
+  test('saves keys from Settings after a restored session', async ({ page }, testInfo) => {
+    test.setTimeout(90_000);
+    const password = 'correct-horse';
+    const firstKey = 'sk-test-openai';
+    const secondKey = 'sk-test-anthropic';
+    const leaks = [];
+    page.on('request', (request) => {
+      const blob = `${request.url()}\n${request.postData() || ''}`;
+      if (blob.includes(password) || blob.includes(firstKey) || blob.includes(secondKey)) {
+        leaks.push(request.url());
+      }
+    });
+
+    await page.goto('/roundtable/');
+    await page.getByLabel('Display name').fill('Ada');
+    await page.getByLabel('Email').fill(`keys-${testInfo.project.name}@example.com`);
+    await page.getByLabel('Password').fill(password);
+    await page.getByTestId('auth-form').getByRole('button', { name: 'Create account' }).click();
+    await expect(page.getByTestId('confirm-seats')).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByTestId('confirm-seats')).toBeVisible();
+    await expect(page.getByTestId('unlock-form')).toBeHidden();
+    await page.getByRole('banner').getByRole('button', { name: 'Settings' }).click();
+    await expect(page.getByTestId('keys-empty')).toBeVisible();
+    const settingsUnlock = page.getByTestId('settings-unlock');
+    await expect(settingsUnlock).toBeVisible();
+    await expect(settingsUnlock).toContainText('Enter your password to unlock key storage');
+    await expect(page.locator('#app')).not.toContainText(/BotBot|___Bot/);
+
+    const openai = page.locator('[data-provider="openai"]');
+    await openai.fill(firstKey);
+    await page.getByTestId('settings-save').click();
+    await expect(page.locator('[data-settings-note]')).toHaveText('Enter your password to unlock key storage.');
+    await expect(page.locator('#app')).not.toContainText('Unlock from the table');
+    await expect(openai).toHaveValue(firstKey);
+    await expect(page.locator('[data-key-state="openai"]')).toHaveText('Not set');
+
+    await page.getByTestId('settings-password').fill('wrong-password');
+    await page.getByTestId('settings-save').click();
+    await expect(page.locator('[data-settings-note]')).toHaveText('Wrong password.', { timeout: 20_000 });
+    await expect(openai).toHaveValue(firstKey);
+    await expect(page.locator('[data-key-state="openai"]')).toHaveText('Not set');
+
+    await page.getByTestId('settings-password').fill(password);
+    await page.getByTestId('settings-save').click();
+    await expect(page.locator('[data-settings-note]')).toHaveText('Saved. Keys stay encrypted on this device.', { timeout: 20_000 });
+    await expect(page.locator('[data-key-state="openai"]')).toHaveText('Saved on this device');
+    await expect(settingsUnlock).toBeHidden();
+    await expect(page.getByTestId('settings-password')).toHaveValue('');
+    await expect(openai).toHaveValue('');
+
+    const dump = await page.evaluate(() => {
+      const read = (store) => Object.entries(store).map(([key, value]) => `${key}=${value}`).join('\n');
+      return `${read(localStorage)}\n${read(sessionStorage)}`;
+    });
+    expect(dump).not.toContain(password);
+    expect(dump).not.toContain(firstKey);
+    expect(dump).toContain('round-table:secrets:');
+    const session = await page.evaluate(() => JSON.parse(sessionStorage.getItem('round-table:session:v1')));
+    expect(Object.keys(session).sort()).toEqual(['email', 'name', 'userId']);
+
+    await page.reload();
+    await expect(page.getByTestId('unlock-form')).toBeVisible();
+    await page.getByRole('banner').getByRole('button', { name: 'Settings' }).click();
+    await expect(page.getByTestId('keys-empty')).toBeHidden();
+    await expect(page.getByTestId('settings-unlock')).toBeVisible();
+    await expect(page.locator('[data-settings-note]')).toHaveText('Saved keys are locked. Enter your password to unlock key storage.');
+    await expect(page.getByTestId('arbiter-key-note')).toContainText('Enter your password to unlock key storage');
+    await expect(page.locator('[data-key-state="openai"]')).toHaveText('Not set');
+    await page.locator('[data-provider="anthropic"]').fill(secondKey);
+    await page.getByTestId('settings-password').fill(password);
+    await page.getByTestId('settings-save').click();
+    await expect(page.locator('[data-key-state="openai"]')).toHaveText('Saved on this device', { timeout: 20_000 });
+    await expect(page.locator('[data-key-state="anthropic"]')).toHaveText('Saved on this device');
+    await expect(page.getByTestId('settings-unlock')).toBeHidden();
+    await page.getByRole('button', { name: 'Back' }).click();
+    await expect(page.getByTestId('unlock-form')).toBeHidden();
+
+    await page.reload();
+    const tableUnlock = page.getByTestId('unlock-form');
+    await expect(tableUnlock).toBeVisible();
+    await tableUnlock.locator('input[name="password"]').fill('wrong-password');
+    await tableUnlock.getByRole('button', { name: 'Unlock' }).click();
+    await expect(page.locator('[data-unlock-error]')).toHaveText('Wrong password.', { timeout: 20_000 });
+    await expect(tableUnlock).toBeVisible();
+    await tableUnlock.locator('input[name="password"]').fill(password);
+    await tableUnlock.getByRole('button', { name: 'Unlock' }).click();
+    await expect(tableUnlock).toBeHidden({ timeout: 20_000 });
+
+    await page.getByRole('banner').getByRole('button', { name: 'Settings' }).click();
+    await expect(page.getByTestId('settings-unlock')).toBeHidden();
+    await expect(page.locator('[data-key-state="openai"]')).toHaveText('Saved on this device');
+    await expect(page.locator('[data-key-state="anthropic"]')).toHaveText('Saved on this device');
+    await page.locator('[data-action="remove-key"][data-provider="anthropic"]').click();
+    await expect(page.locator('[data-key-state="anthropic"]')).toHaveText('Not set');
+    await expect(page.locator('[data-key-state="openai"]')).toHaveText('Saved on this device');
+    await expect(page.locator('[data-settings-note]')).toHaveText('Key removed from this device.');
+
+    await page.reload();
+    await expect(page.getByTestId('unlock-form')).toBeVisible();
+    await page.getByRole('banner').getByRole('button', { name: 'Settings' }).click();
+    await page.locator('[data-action="remove-key"][data-provider="openai"]').click();
+    await expect(page.locator('[data-settings-note]')).toHaveText('Enter your password to unlock key storage.');
+    await page.getByRole('button', { name: 'Back' }).click();
+    await expect(page.getByTestId('unlock-form')).toBeVisible();
+    await page.getByRole('banner').getByRole('button', { name: 'Settings' }).click();
+    await page.getByTestId('settings-password').fill(password);
+    await page.locator('[data-action="remove-key"][data-provider="openai"]').click();
+    await expect(page.locator('[data-settings-note]')).toHaveText('Key removed from this device.', { timeout: 20_000 });
+    await expect(page.locator('[data-key-state="openai"]')).toHaveText('Not set');
+
+    await page.reload();
+    await expect(page.getByTestId('confirm-seats')).toBeVisible();
+    await expect(page.getByTestId('unlock-form')).toBeHidden();
+    await page.getByRole('banner').getByRole('button', { name: 'Settings' }).click();
+    await expect(page.getByTestId('keys-empty')).toBeVisible();
+    await expect(page.getByTestId('settings-unlock')).toBeVisible();
+    expect(leaks).toEqual([]);
   });
 });
