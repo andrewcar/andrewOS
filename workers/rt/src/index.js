@@ -6,6 +6,7 @@ import { handleRequest } from './router.js';
 import { wwwToApexRedirect } from './www-redirect.js';
 
 function isApiPath(pathname) {
+  // /rt/v1/bug/* is included so the bug-report proxy runs before static assets.
   return pathname === '/rt' || pathname.startsWith('/rt/') || pathname === '/mcp';
 }
 

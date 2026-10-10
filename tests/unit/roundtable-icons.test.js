@@ -43,13 +43,13 @@ describe('round table icons', () => {
     expect(manifest.name).toBe('Round Table');
     expect(manifest.theme_color).toBe('#0b0c10');
     expect(manifest.icons.map((icon) => icon.src)).toEqual([
-      'icon-192.png?v=10',
-      'icon-512.png?v=10',
-      'icon-512-maskable.png?v=10',
+      'icon-192.png?v=11',
+      'icon-512.png?v=11',
+      'icon-512-maskable.png?v=11',
     ]);
     for (const icon of manifest.icons) {
       expect(icon.src.startsWith('/')).toBe(false);
-      expect(icon.src).toContain('?v=10');
+      expect(icon.src).toContain('?v=11');
     }
   });
 });
