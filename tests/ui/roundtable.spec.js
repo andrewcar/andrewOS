@@ -11,14 +11,14 @@ test.describe('round table', () => {
     expect(png.ok()).toBeTruthy();
     const manifest = await page.request.get('/roundtable/site.webmanifest');
     expect(manifest.ok()).toBeTruthy();
-    const css = await page.request.get('/roundtable/styles.css?v=10');
+    const css = await page.request.get('/roundtable/styles.css?v=11');
     expect(css.ok()).toBeTruthy();
-    const js = await page.request.get('/roundtable/js/app.js?v=10');
+    const js = await page.request.get('/roundtable/js/app.js?v=11');
     expect(js.ok()).toBeTruthy();
     const html = await page.content();
     expect(html).toContain('rel="canonical"');
-    expect(html).toContain('./favicon.svg?v=10');
-    expect(html).toContain('./favicon.png?v=10');
+    expect(html).toContain('./favicon.svg?v=11');
+    expect(html).toContain('./favicon.png?v=11');
     expect(html).not.toContain('href="/favicon.png"');
   });
 

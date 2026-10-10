@@ -12,6 +12,7 @@ import { createMemoryStore, createKvStore } from './store.js';
 import { connectorHealth } from './health.js';
 import { isMcpPath, handleMcp } from './mcp.js';
 import { randomId } from './crypto-util.js';
+import { handleBugProxy, isBugProxyPath } from './bug-proxy.js';
 import {
   arbiterWebhookEnabled,
   validateWebhookUrl,
@@ -59,6 +60,11 @@ export async function handleRequest(request, env, deps = {}) {
   const pathname = url.pathname;
 
   // `/` is the static UI (Workers assets). API lives under /rt/v1/* plus the /mcp alias.
+  // Bug-report routes are matched before the generic OPTIONS short-circuit.
+
+  if (isBugProxyPath(pathname)) {
+    return handleBugProxy(request, { fetchImpl });
+  }
 
   if (request.method === 'OPTIONS') {
     return noContent();
